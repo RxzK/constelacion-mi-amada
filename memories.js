@@ -7,7 +7,7 @@ const MEMORIES = [
     color: "#00cfff",
     glowColor: "#00cfff88",
     description:
-      "Todo tiene un origen. El nuestro empezó con un \"¿quieres jugar Fortnite?\". Sabía que me gustabas mucho antes de preguntarte, y ese fue mi momento... mi excusa perfecta para acercarme a ti. Una partida que cambió el rumbo de mi universo entero.",
+      'Todo tiene un origen. El nuestro empezó con un "¿quieres jugar Fortnite?". Sabía que me gustabas mucho antes de preguntarte, y ese fue mi momento... mi excusa perfecta para acercarme a ti. Una partida que cambió el rumbo de mi universo entero.',
     position: { x: -4.5, y: 2.0, z: -3.0 },
     size: 0.22,
   },
@@ -43,7 +43,7 @@ const MEMORIES = [
     color: "#c97fff",
     glowColor: "#c97fff88",
     description:
-      "Ninguno de los dos sabe ir lento. Expresábamos lo que sentíamos sin filtros, sin miedo. Y de ahí nació \"Monky\": nuestro apodo, nuestra identidad, nuestra forma secreta de decirnos que somos el uno para el otro.",
+      'Ninguno de los dos sabe ir lento. Expresábamos lo que sentíamos sin filtros, sin miedo. Y de ahí nació "Monky": nuestro apodo, nuestra identidad, nuestra forma secreta de decirnos que somos el uno para el otro.',
     position: { x: 5.5, y: -1.5, z: -2.0 },
     size: 0.20,
   },
@@ -55,7 +55,7 @@ const MEMORIES = [
     color: "#ffd700",
     glowColor: "#ffd70088",
     description:
-      "Ese día me llamaste \"amor\" por primera vez. Ya nos decíamos cora, mi niño, mi niña... pero la palabra \"amor\" fue diferente. Fue como si el universo entero se detuviera un segundo para que yo pudiera grabar ese momento para siempre.",
+      'Ese día me llamaste "amor" por primera vez. Ya nos decíamos cora, mi niño, mi niña... pero la palabra "amor" fue diferente. Fue como si el universo entero se detuviera un segundo para que yo pudiera grabar ese momento para siempre.',
     position: { x: -5.0, y: 1.0, z: -7.0 },
     size: 0.30,
   },
@@ -79,7 +79,7 @@ const MEMORIES = [
     color: "#ffffff",
     glowColor: "#ffffff55",
     description:
-      "Cada momento que pase contigo es una nueva estrella en este universo. Aún nos quedan infinitas galaxias por descubrir, infinitas risas, infinitas partidas y infinitos \"te quiero\". Este universo apenas está empezando, mi Monkeysita.",
+      'Cada momento que pase contigo es una nueva estrella en este universo. Aún nos quedan infinitas galaxias por descubrir, infinitas risas, infinitas partidas y infinitos "te quiero". Este universo apenas está empezando, mi Monkeysita.',
     position: { x: 0.5, y: 4.5, z: -4.0 },
     size: 0.25,
   },
