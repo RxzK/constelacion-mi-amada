@@ -6,7 +6,8 @@
 (function () {
     "use strict";
 
-    /* ---- LIVE COUNTER ---- */
+    document.addEventListener("DOMContentLoaded", () => {
+        /* ---- LIVE COUNTER ---- */
     function updateCounter() {
         const now = new Date();
         const diff = Math.max(0, now - SITE_CONFIG.startDate);
@@ -426,5 +427,7 @@
     document.addEventListener("keydown", e => {
         if (e.key === "Escape") closeMemoryCard();
     });
+
+    }); // End DOMContentLoaded
 
 })();
