@@ -79,14 +79,14 @@ const MEMORIES = [
     color: "#ffffff",
     glowColor: "#ffffff55",
     description:
-      'Cada momento que pase contigo es una nueva estrella en este universo. Aún nos quedan infinitas galaxias por descubrir, infinitas risas, infinitas partidas y infinitos "te quiero". Este universo apenas está empezando, mi Monkeysita.',
+      'Cada momento que pase contigo es una nueva estrella en este universo. Aún nos quedan infinitas galaxias por descubrir, infinitas risas, infinitas partidas y infinitos "te quiero". Este universo apenas está empezando, Karla.',
     position: { x: 0.5, y: 4.5, z: -4.0 },
     size: 0.25,
   },
 ];
 
 const SITE_CONFIG = {
-  title: "Nuestro Universo, Mi Monkeysita",
+  title: "Nuestro Universo, Karla",
   subtitles: [
     "Escrito entre estrellas, desde el 20 de enero",
     "Donde cada estrella guarda un recuerdo nuestro",

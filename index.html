@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nuestro Universo, Mi Monkeysita</title>
+  <title>Nuestro Universo, Karla</title>
   <meta name="description" content="Un universo de recuerdos creado con amor, donde cada estrella guarda un momento especial nuestro." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -31,7 +31,7 @@
 
       <h1 class="intro-title">
         <span class="title-line1">Nuestro Universo,</span>
-        <span class="title-line2">Mi Monkeysita</span>
+        <span class="title-line2">Karla</span>
       </h1>
 
       <p id="subtitle-text" class="intro-subtitle"></p>
@@ -74,6 +74,12 @@
       <span>🌌 Arrastra para explorar · Haz clic en las estrellas brillantes</span>
     </div>
 
+    <!-- Create Star Button -->
+    <button id="add-star-btn" class="add-star-btn" title="Crea tu propia estrella">
+      <span class="icon">+</span>
+      <span class="text">Crea tu Estrella</span>
+    </button>
+
     <button id="back-btn">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
       Inicio
@@ -95,6 +101,29 @@
       <div class="card-footer">
         Presiona 'Esc' o haz clic fuera para cerrar
       </div>
+    </div>
+  </div>
+
+  <!-- CREATE STAR MODAL -->
+  <div id="create-star-modal" class="hidden">
+    <div id="create-star-content">
+      <button id="create-star-close">✕</button>
+      <h2 id="create-star-title-ui">Crea una Nueva Estrella</h2>
+      <form id="create-star-form">
+        <label for="star-title">Título del Recuerdo:</label>
+        <input type="text" id="star-title" required placeholder="Ej. Nuestro viaje a la playa" />
+
+        <label for="star-desc">Mensaje / Descripción (asegúrate de no usar comillas simples libres):</label>
+        <textarea id="star-desc" required placeholder="Escribe lo que sientes..."></textarea>
+
+        <label for="star-emoji">Emoji:</label>
+        <input type="text" id="star-emoji" required placeholder="Ej. 🏖️" maxlength="2" />
+
+        <label for="star-color">Color de la Estrella:</label>
+        <input type="color" id="star-color" value="#ffffff" />
+
+        <button type="submit" id="create-star-submit">Crear y Lanzar Estrella 🚀</button>
+      </form>
     </div>
   </div>
 

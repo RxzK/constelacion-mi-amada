@@ -144,6 +144,15 @@
         scene.add(nebulaParts);
 
         /* ---- MEMORY STARS ---- */
+        // Load custom user stars
+        const stored = localStorage.getItem("customStars_v1");
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored);
+                parsed.forEach(m => MEMORIES.push(m));
+            } catch (e) {}
+        }
+        
         MEMORIES.forEach(mem => {
             const group = createMemoryStar(mem);
             scene.add(group);
@@ -188,6 +197,9 @@
 
         /* ---- RENDER LOOP ---- */
         animate();
+
+        /* ---- UI EXPERIENCES ---- */
+        setupUIEvents();
 
         /* ---- RESIZE ---- */
         window.addEventListener("resize", () => {
@@ -605,6 +617,17 @@
                 gsap.to(targetRot, { x: 0, y: 0, duration: 1.5 });
             }
         }
+
+        // Mini-game: Catch the Meteor
+        const hitMeteors = raycaster.intersectObjects(meteors.map(m => m.mesh), false);
+        if (hitMeteors.length > 0) {
+            const mMesh = hitMeteors[0].object;
+            const idx = meteors.findIndex(m => m.mesh === mMesh);
+            if (idx > -1) {
+                meteors[idx].life = 0; // Desintegrate meteor
+                alert("✨ ¡Atrapaste una estrella fugaz! ✨\nPidamos un deseo juntos...");
+            }
+        }
     }
 
     /* ==== MEMORY CARD ==== */
@@ -691,6 +714,92 @@
         p.position.copy(pos);
         scene.add(p);
         mouseTrail.push({ mesh: p, life: 1.0 });
+    }
+
+    /* ==== PEAK INTERACTIVITY (UI) ==== */
+    function setupUIEvents() {
+        // 1. "Crea tu Estrella" Modal
+        const modal = document.getElementById("create-star-modal");
+        const btnOpen = document.getElementById("add-star-btn");
+        const btnClose = document.getElementById("create-star-close");
+        const form = document.getElementById("create-star-form");
+
+        if(btnOpen) btnOpen.addEventListener("click", () => modal.classList.remove("hidden"));
+        if(btnClose) btnClose.addEventListener("click", () => modal.classList.add("hidden"));
+
+        if(form) {
+            form.addEventListener("submit", (e) => {
+                e.preventDefault();
+                const title = document.getElementById("star-title").value;
+                const desc = document.getElementById("star-desc").value;
+                const emoji = document.getElementById("star-emoji").value;
+                const color = document.getElementById("star-color").value;
+
+                const newMem = {
+                    id: Date.now(),
+                    title: title,
+                    emoji: emoji,
+                    date: "Nueva Estrella",
+                    color: color,
+                    glowColor: color + "88",
+                    description: desc,
+                    position: { 
+                        x: (Math.random() - 0.5) * 15, 
+                        y: (Math.random() - 0.5) * 15, 
+                        z: (Math.random() - 0.5) * 10 
+                    },
+                    size: 0.25
+                };
+
+                MEMORIES.push(newMem);
+                const group = createMemoryStar(newMem);
+                if (window._pivot) window._pivot.add(group);
+                else scene.add(group);
+                
+                // Important: Need the shell inside userData to be raycastable
+                starMeshes.push({ group, mem: newMem, userData: group.userData });
+
+                const stored = localStorage.getItem("customStars_v1");
+                const parsed = stored ? JSON.parse(stored) : [];
+                parsed.push(newMem);
+                localStorage.setItem("customStars_v1", JSON.stringify(parsed));
+
+                modal.classList.add("hidden");
+                form.reset();
+                
+                // Fly to the new star
+                if (!window._isZooming) {
+                    window._isZooming = true;
+                    const tp = new THREE.Vector3();
+                    group.getWorldPosition(tp);
+                    gsap.to(camera.position, {
+                        x: tp.x + 0, y: tp.y + 0, z: tp.z + 4,
+                        duration: 2, ease: "power3.out",
+                        onComplete: () => { window._isZooming = false; openMemoryCard(newMem); }
+                    });
+                }
+            });
+        }
+
+        // 2. 3D Hologram Polaroid Effect on Mousemove
+        const overlay = document.getElementById("card-overlay");
+        overlay.addEventListener("mousemove", (e) => {
+            const photo = document.querySelector(".memory-photo");
+            if (photo) {
+                photo.classList.add("hologram");
+                const rect = photo.getBoundingClientRect();
+                // If mouse is inside photo bounds
+                if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                    const x = e.clientX - rect.left - rect.width / 2;
+                    const y = e.clientY - rect.top - rect.height / 2;
+                    const rotateY = (x / (rect.width / 2)) * 12;
+                    const rotateX = -(y / (rect.height / 2)) * 12;
+                    photo.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
+                } else {
+                    photo.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)`;
+                }
+            }
+        });
     }
 
     }); // End DOMContentLoaded
