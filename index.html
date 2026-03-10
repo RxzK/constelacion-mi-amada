@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nuestro Universo, Mi Monkeysita</title>
+  <meta name="description" content="Un universo de recuerdos creado con amor, donde cada estrella guarda un momento especial nuestro." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Inter:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="index.css" />
+</head>
+<body>
+
+  <!-- INTRO SCREEN -->
+  <div id="intro-screen">
+    <div class="intro-content">
+      <div class="stars-bg"></div>
+      <div class="nebula-glow"></div>
+
+      <div class="intro-date-badge">20 · ENE · 2026</div>
+
+      <h1 class="intro-title">
+        <span class="title-line1">Nuestro Universo,</span>
+        <span class="title-line2">Mi Monkeysita</span>
+      </h1>
+
+      <p id="subtitle-text" class="intro-subtitle"></p>
+
+      <div class="counter-strip">
+        <div class="counter-item">
+          <span id="cnt-days" class="cnt-val">0</span>
+          <span class="cnt-label">días</span>
+        </div>
+        <div class="counter-divider">·</div>
+        <div class="counter-item">
+          <span id="cnt-hours" class="cnt-val">0</span>
+          <span class="cnt-label">horas</span>
+        </div>
+        <div class="counter-divider">·</div>
+        <div class="counter-item">
+          <span id="cnt-mins" class="cnt-val">0</span>
+          <span class="cnt-label">minutos</span>
+        </div>
+        <div class="counter-divider">·</div>
+        <div class="counter-item">
+          <span id="cnt-secs" class="cnt-val">0</span>
+          <span class="cnt-label">segundos</span>
+        </div>
+      </div>
+      <p class="counter-caption">juntos, desde el primer "¿juegas Fortnite?"</p>
+
+      <button id="enter-btn" class="enter-btn">
+        <span>Explorar el Universo</span>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- 3D UNIVERSE -->
+  <div id="universe-screen" class="hidden">
+    <canvas id="three-canvas"></canvas>
+
+    <div id="hint-toast">
+      <span>🌌 Arrastra para explorar · Haz clic en las estrellas brillantes</span>
+    </div>
+
+    <button id="back-btn">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Inicio
+    </button>
+  </div>
+
+  <!-- MEMORY CARD OVERLAY -->
+  <div id="card-overlay" class="hidden">
+    <div id="memory-card">
+      <button id="card-close">✕</button>
+      <div id="card-emoji"></div>
+      <div id="card-date-badge"></div>
+      <h2 id="card-title"></h2>
+      <p id="card-desc"></p>
+      <div class="card-footer">❤️ Monky &amp; Monkeysita</div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="memories.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,491 @@
+/* ===== RESET & BASE ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+}
+
+/* ===== FONTS ===== */
+body {
+  font-family: 'Inter', sans-serif;
+  color: #fff;
+}
+
+/* ===== UTILITY ===== */
+.hidden {
+  display: none !important;
+}
+
+/* ============================
+   INTRO SCREEN
+=========================== */
+#intro-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  background: radial-gradient(ellipse at 50% 50%, #0a0020 0%, #000 100%);
+  transition: opacity 1.2s ease, transform 1.2s ease;
+}
+
+#intro-screen.fade-out {
+  opacity: 0;
+  transform: scale(1.05);
+  pointer-events: none;
+}
+
+/* Animated star particles background */
+.stars-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 10% 20%, rgba(255, 255, 255, 0.8) 0%, transparent 100%),
+    radial-gradient(1px 1px at 25% 55%, rgba(200, 180, 255, 0.7) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 40% 10%, rgba(255, 255, 255, 0.9) 0%, transparent 100%),
+    radial-gradient(1px 1px at 55% 80%, rgba(255, 200, 255, 0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 35%, rgba(180, 220, 255, 0.8) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 80% 65%, rgba(255, 255, 255, 0.9) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 15%, rgba(255, 180, 200, 0.7) 0%, transparent 100%),
+    radial-gradient(1px 1px at 15% 70%, rgba(200, 255, 220, 0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 60% 45%, rgba(255, 255, 180, 0.7) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 35% 90%, rgba(255, 255, 255, 0.8) 0%, transparent 100%),
+    radial-gradient(1px 1px at 5% 45%, rgba(180, 200, 255, 0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 95% 50%, rgba(255, 160, 200, 0.7) 0%, transparent 100%),
+    radial-gradient(1px 1px at 48% 28%, rgba(255, 255, 255, 0.9) 0%, transparent 100%),
+    radial-gradient(1px 1px at 72% 88%, rgba(200, 180, 255, 0.7) 0%, transparent 100%);
+  animation: twinkle 4s ease-in-out infinite alternate;
+}
+
+@keyframes twinkle {
+  0% {
+    opacity: 0.6;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Nebula glow */
+.nebula-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 30%, rgba(180, 80, 255, 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 35% at 80% 70%, rgba(255, 80, 140, 0.10) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 30% at 60% 20%, rgba(0, 160, 255, 0.10) 0%, transparent 70%),
+    radial-gradient(ellipse 55% 45% at 40% 80%, rgba(255, 180, 0, 0.07) 0%, transparent 70%);
+}
+
+/* Intro content card */
+.intro-content {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2rem 1.5rem;
+  max-width: 680px;
+  width: 100%;
+  pointer-events: auto;
+  animation: fadeUp 1.4s ease forwards;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Date badge */
+.intro-date-badge {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: rgba(255, 220, 255, 0.7);
+  border: 1px solid rgba(255, 180, 255, 0.25);
+  padding: 0.35rem 1rem;
+  border-radius: 100px;
+  margin-bottom: 2.2rem;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(6px);
+  animation: fadeUp 1.4s 0.2s ease both;
+}
+
+/* Title */
+.intro-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15em;
+  margin-bottom: 1.4rem;
+  animation: fadeUp 1.4s 0.4s ease both;
+}
+
+.title-line1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(2rem, 6vw, 3.4rem);
+  font-weight: 300;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.85);
+  letter-spacing: 0.04em;
+}
+
+.title-line2 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2.4rem, 7.5vw, 4.2rem);
+  font-weight: 700;
+  background: linear-gradient(135deg, #00cfff 0%, #c97fff 30%, #ff6eb4 60%, #ffd700 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.01em;
+}
+
+/* Subtitle */
+.intro-subtitle {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(0.95rem, 2.5vw, 1.2rem);
+  font-style: italic;
+  font-weight: 300;
+  color: rgba(200, 180, 255, 0.8);
+  letter-spacing: 0.05em;
+  min-height: 2em;
+  margin-bottom: 2.2rem;
+  animation: fadeUp 1.4s 0.6s ease both;
+  transition: opacity 0.5s ease;
+}
+
+/* Counter */
+.counter-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 0.5rem;
+  animation: fadeUp 1.4s 0.8s ease both;
+}
+
+.counter-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cnt-val {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.5rem, 4vw, 2.2rem);
+  font-weight: 700;
+  background: linear-gradient(135deg, #00cfff, #c97fff, #ff6eb4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+}
+
+.cnt-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(180, 160, 220, 0.7);
+  margin-top: 0.2rem;
+}
+
+.counter-divider {
+  font-size: 1.5rem;
+  color: rgba(255, 255, 255, 0.2);
+  margin-bottom: 1rem;
+}
+
+.counter-caption {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.85rem;
+  color: rgba(180, 160, 220, 0.6);
+  letter-spacing: 0.04em;
+  margin-bottom: 2.5rem;
+  animation: fadeUp 1.4s 0.9s ease both;
+}
+
+/* Enter Button */
+.enter-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.85rem 2.2rem;
+  background: linear-gradient(135deg, rgba(0, 207, 255, 0.15), rgba(201, 127, 255, 0.15), rgba(255, 110, 180, 0.15));
+  border: 1px solid rgba(201, 127, 255, 0.4);
+  border-radius: 100px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: rgba(220, 200, 255, 0.95);
+  letter-spacing: 0.08em;
+  backdrop-filter: blur(12px);
+  transition: all 0.35s ease;
+  box-shadow: 0 0 30px rgba(201, 127, 255, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  animation: fadeUp 1.4s 1s ease both;
+  position: relative;
+  z-index: 20;
+  pointer-events: auto;
+}
+
+.enter-btn svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.3s ease;
+}
+
+.enter-btn:hover {
+  background: linear-gradient(135deg, rgba(0, 207, 255, 0.25), rgba(201, 127, 255, 0.25), rgba(255, 110, 180, 0.25));
+  border-color: rgba(201, 127, 255, 0.7);
+  box-shadow: 0 0 50px rgba(201, 127, 255, 0.3), 0 0 100px rgba(0, 207, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+}
+
+.enter-btn:hover svg {
+  transform: translateX(4px);
+}
+
+/* ============================
+   UNIVERSE SCREEN (3D)
+=========================== */
+#universe-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+#three-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+#three-canvas:active {
+  cursor: grabbing;
+}
+
+/* Hint toast */
+#hint-toast {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 100px;
+  padding: 0.6rem 1.4rem;
+  font-size: 0.78rem;
+  color: rgba(200, 180, 255, 0.8);
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  animation: fadeUp 1s ease both, dissolve 3s 4s ease forwards;
+}
+
+@keyframes dissolve {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Back button */
+#back-btn {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.2rem;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 100px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+  color: rgba(200, 180, 255, 0.9);
+  letter-spacing: 0.06em;
+  transition: all 0.3s ease;
+}
+
+#back-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+#back-btn:hover {
+  background: rgba(201, 127, 255, 0.15);
+  border-color: rgba(201, 127, 255, 0.4);
+  box-shadow: 0 0 20px rgba(201, 127, 255, 0.2);
+}
+
+/* ============================
+   MEMORY CARD OVERLAY
+=========================== */
+#card-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 10, 0.7);
+  backdrop-filter: blur(8px);
+  animation: overlayIn 0.4s ease;
+  padding: 1rem;
+}
+
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+#memory-card {
+  position: relative;
+  max-width: 500px;
+  width: 100%;
+  padding: 2.5rem 2rem 2rem;
+  background: rgba(15, 5, 30, 0.75);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  box-shadow:
+    0 0 80px rgba(201, 127, 255, 0.15),
+    0 25px 60px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  animation: cardZoom 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  text-align: center;
+}
+
+@keyframes cardZoom {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Close button */
+#card-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+}
+
+#card-close:hover {
+  background: rgba(255, 100, 100, 0.2);
+  border-color: rgba(255, 100, 100, 0.4);
+  color: #fff;
+}
+
+#card-emoji {
+  font-size: 2.8rem;
+  margin-bottom: 0.8rem;
+  filter: drop-shadow(0 0 12px currentColor);
+}
+
+#card-date-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(200, 180, 255, 0.7);
+  border: 1px solid rgba(201, 127, 255, 0.3);
+  padding: 0.3rem 0.9rem;
+  border-radius: 100px;
+  margin-bottom: 1rem;
+  background: rgba(201, 127, 255, 0.06);
+}
+
+#card-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.4rem, 4vw, 1.9rem);
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 1.1rem;
+  text-shadow: 0 0 30px rgba(201, 127, 255, 0.4);
+}
+
+#card-desc {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.05rem, 2.8vw, 1.2rem);
+  font-style: italic;
+  font-weight: 300;
+  line-height: 1.75;
+  color: rgba(220, 210, 255, 0.85);
+}
+
+.card-footer {
+  margin-top: 1.8rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  color: rgba(255, 180, 200, 0.5);
+  text-transform: uppercase;
+}
+
+/* ============================
+   RESPONSIVE
+=========================== */
+@media (max-width: 480px) {
+  .counter-strip {
+    gap: 0.5rem;
+  }
+
+  .counter-divider {
+    display: none;
+  }
+
+  #memory-card {
+    padding: 2rem 1.4rem 1.6rem;
+  }
+}
