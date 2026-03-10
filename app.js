@@ -95,6 +95,7 @@
     let starMeshes = [];
     let nebulaParts, bgStarfield, stardust;
     let mouseTrail = [];
+    let particleTexture;
 
     // Orbit / drag state
     let isDragging = false;
@@ -126,6 +127,9 @@
         /* ---- CAMERA ---- */
         camera = new THREE.PerspectiveCamera(65, canvas.clientWidth / canvas.clientHeight, 0.1, 200);
         camera.position.set(0, 0, 10);
+
+        /* ---- PARTICLE TEXTURE ---- */
+        particleTexture = createGlowTexture();
 
         /* ---- AMBIENT LIGHT ---- */
         const ambient = new THREE.AmbientLight(0x111133, 2);
@@ -220,9 +224,25 @@
         geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
         geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
         const mat = new THREE.PointsMaterial({
-            size: 0.18, vertexColors: true, sizeAttenuation: true, transparent: true, opacity: 0.85,
+            size: 0.35, vertexColors: true, sizeAttenuation: true, transparent: true, opacity: 0.9, map: particleTexture, depthWrite: false, blending: THREE.AdditiveBlending
         });
         return new THREE.Points(geo, mat);
+    }
+
+    /* ==== GLOW TEXTURE GENERATOR ==== */
+    function createGlowTexture() {
+        const canvas = document.createElement("canvas");
+        canvas.width = 64;
+        canvas.height = 64;
+        const ctx = canvas.getContext("2d");
+        const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+        gradient.addColorStop(0, "rgba(255, 255, 255, 1)");
+        gradient.addColorStop(0.2, "rgba(255, 255, 255, 0.8)");
+        gradient.addColorStop(0.5, "rgba(255, 255, 255, 0.2)");
+        gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 64, 64);
+        return new THREE.CanvasTexture(canvas);
     }
 
     /* ==== NEBULA ==== */
@@ -248,8 +268,8 @@
         geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
         geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
         const mat = new THREE.PointsMaterial({
-            size: 0.55, vertexColors: true, sizeAttenuation: true,
-            transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending,
+            size: 1.2, vertexColors: true, sizeAttenuation: true,
+            transparent: true, opacity: 0.25, map: particleTexture, depthWrite: false, blending: THREE.AdditiveBlending,
         });
         return new THREE.Points(geo, mat);
     }
@@ -508,7 +528,7 @@
         }
         geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
         const mat = new THREE.PointsMaterial({
-            size: 0.05, color: 0xffffff, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false
+            size: 0.15, color: 0xffffff, transparent: true, opacity: 0.4, map: particleTexture, blending: THREE.AdditiveBlending, depthWrite: false
         });
         return new THREE.Points(geo, mat);
     }
