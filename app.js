@@ -147,7 +147,7 @@
         MEMORIES.forEach(mem => {
             const group = createMemoryStar(mem);
             scene.add(group);
-            starMeshes.push({ group, mem, core: group.children[0] });
+            starMeshes.push({ group, mem, userData: group.userData });
         });
 
         /* ---- CONSTELLATION LINES ---- */
@@ -274,43 +274,55 @@
         return new THREE.Points(geo, mat);
     }
 
-    /* ==== MEMORY STAR ==== */
+    /* ==== MEMORY STAR (CRYSTALLINE) ==== */
     function createMemoryStar(mem) {
         const group = new THREE.Group();
         group.position.set(mem.position.x, mem.position.y, mem.position.z);
 
         const hexColor = new THREE.Color(mem.color);
 
-        // Core sphere
-        const coreGeo = new THREE.SphereGeometry(mem.size, 20, 20);
+        // Core Glowing Crystal
+        const coreGeo = new THREE.IcosahedronGeometry(mem.size * 0.7, 0);
         const coreMat = new THREE.MeshBasicMaterial({ color: hexColor });
         const core = new THREE.Mesh(coreGeo, coreMat);
         group.add(core);
 
-        // Glow sprite using a programmatic canvas texture
+        // Outer Glass Shell
+        const shellGeo = new THREE.IcosahedronGeometry(mem.size * 1.1, 1);
+        const shellMat = new THREE.MeshPhysicalMaterial({
+            color: 0xffffff,
+            metalness: 0.1,
+            roughness: 0.2,
+            transmission: 0.95, // Glass-like transparency
+            ior: 1.5,
+            transparent: true,
+            opacity: 1,
+            side: THREE.FrontSide
+        });
+        const shell = new THREE.Mesh(shellGeo, shellMat);
+        group.add(shell);
+
+        // Dynamic Point Light
+        const light = new THREE.PointLight(hexColor, 1.5, 10);
+        group.add(light);
+
+        // Subtle Glow Sprite
         const glowTex = makeGlowTexture(mem.color);
         const glowMat = new THREE.SpriteMaterial({
             map: glowTex, color: hexColor,
-            transparent: true, opacity: 0.7,
+            transparent: true, opacity: 0.35,
             blending: THREE.AdditiveBlending, depthWrite: false,
         });
         const glow = new THREE.Sprite(glowMat);
-        const gs = mem.size * 10;
+        const gs = mem.size * 6;
         glow.scale.set(gs, gs, 1);
         group.add(glow);
 
-        // Outer pulsing ring
-        const ringGeo = new THREE.RingGeometry(mem.size * 1.4, mem.size * 1.7, 32);
-        const ringMat = new THREE.MeshBasicMaterial({
-            color: hexColor, side: THREE.DoubleSide,
-            transparent: true, opacity: 0.35,
-        });
-        const ring = new THREE.Mesh(ringGeo, ringMat);
-        ring.lookAt(new THREE.Vector3(0, 0, 10));
-        group.add(ring);
-
-        // Store refs for animation
-        group.userData = { mem, core, glow, ring, phase: Math.random() * Math.PI * 2 };
+        group.userData = { 
+            mem, core, shell, light, glow, 
+            phase: Math.random() * Math.PI * 2,
+            baseScale: 1.0, targetScale: 1.0
+        };
 
         return group;
     }
@@ -366,19 +378,47 @@
             window._pivot.rotation.y = rotation.y;
         }
 
+        // Check Hover State
+        raycaster.setFromCamera(mouse3D, camera);
+        const hitTargets = starMeshes.map(s => s.userData.shell);
+        const hovers = raycaster.intersectObjects(hitTargets, false);
+        const hoveredShell = hovers.length > 0 ? hovers[0].object : null;
+
         // Animate each memory star
         starMeshes.forEach(s => {
-            const d = s.group.userData;
+            const d = s.userData;
+            const isHovered = (hoveredShell === d.shell);
+            
+            // Smooth scaling physics
+            d.targetScale = isHovered ? 1.5 : 1.0;
+            d.baseScale += (d.targetScale - d.baseScale) * 0.1;
+            
             const pulse = 0.85 + 0.15 * Math.sin(t * 1.5 + d.phase);
-            d.core.scale.setScalar(pulse);
-            d.glow.material.opacity = 0.5 + 0.25 * Math.sin(t * 1.2 + d.phase);
-            d.ring.material.opacity = 0.15 + 0.25 * Math.abs(Math.sin(t * 0.8 + d.phase));
-            d.ring.rotation.z = t * 0.3 + d.phase;
+            const finalScale = pulse * d.baseScale;
+            
+            d.core.scale.setScalar(finalScale);
+            d.shell.scale.setScalar(finalScale);
+            
+            // Complex rotation
+            d.shell.rotation.x = t * 0.2 + d.phase;
+            d.shell.rotation.y = t * 0.3 + d.phase;
+            d.core.rotation.x = -t * 0.1;
+            d.core.rotation.y = -t * 0.15;
+
+            // Lights and glow react to hover
+            d.glow.material.opacity = 0.2 + 0.15 * Math.sin(t * 1.2 + d.phase) + (isHovered ? 0.4 : 0);
+            d.light.intensity = isHovered ? 3 : 1.5;
         });
 
-        // Slow nebula drift
-        if (nebulaParts) nebulaParts.rotation.y = t * 0.01;
-        if (bgStarfield) bgStarfield.rotation.y = t * 0.002;
+        // Slow nebula drift with Parallax Depth
+        if (nebulaParts) {
+            nebulaParts.rotation.y = t * 0.01 + mouse3D.x * 0.08;
+            nebulaParts.rotation.x = mouse3D.y * 0.08;
+        }
+        if (bgStarfield) {
+            bgStarfield.rotation.y = t * 0.002 + mouse3D.x * 0.04;
+            bgStarfield.rotation.x = mouse3D.y * 0.04;
+        }
 
         // Animate stardust
         if (stardust) {
@@ -475,11 +515,11 @@
     /* ==== RAYCASTING ==== */
     function checkStarClick() {
         raycaster.setFromCamera(mouse3D, camera);
-        const hitTargets = starMeshes.map(s => s.core);
+        const hitTargets = starMeshes.map(s => s.userData.shell);
         const hits = raycaster.intersectObjects(hitTargets, false);
         if (hits.length > 0) {
-            const hitCore = hits[0].object;
-            const found = starMeshes.find(s => s.core === hitCore);
+            const hitShell = hits[0].object;
+            const found = starMeshes.find(s => s.userData.shell === hitShell);
             if (found) openMemoryCard(found.mem);
         }
     }
