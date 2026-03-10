@@ -14,6 +14,15 @@
 
   <!-- INTRO SCREEN -->
   <div id="intro-screen">
+    <!-- Music Toggle -->
+    <button id="music-toggle" class="music-btn" title="Activar/Desactivar Música">
+      <span class="icon">♪</span>
+      <span class="text">Música: OFF</span>
+    </button>
+    <audio id="bg-music" loop>
+      <source src="https://www.chosic.com/wp-content/uploads/2021/04/And-So-It-Begins-Inspired-By-Crush-By-Sarcastic-Sounds.mp3" type="audio/mpeg">
+    </audio>
+
     <div class="intro-content">
       <div class="stars-bg"></div>
       <div class="nebula-glow"></div>
@@ -85,6 +94,15 @@
 
   <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- Post-processing and GSAP -->
+  <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  
   <script src="memories.js?v=1.0.1"></script>
   <script src="app.js?v=1.0.1"></script>
 </body>

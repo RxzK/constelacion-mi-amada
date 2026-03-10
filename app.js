@@ -46,15 +46,17 @@
     let sceneInitialized = false;
 
     enterBtn.addEventListener("click", () => {
-        introScreen.classList.add("fade-out");
-        setTimeout(() => {
+        gsap.to(introScreen, { opacity: 0, duration: 1, onComplete: () => {
             introScreen.classList.add("hidden");
             universeScreen.classList.remove("hidden");
             if (!sceneInitialized) {
                 initThreeJS();
                 sceneInitialized = true;
             }
-        }, 1200);
+            // Warp effect transition
+            gsap.fromTo(camera.position, { z: 50 }, { z: 10, duration: 2.5, ease: "power2.out" });
+            gsap.fromTo(bloomPass, { strength: 10 }, { strength: 1.5, duration: 3 });
+        }});
     });
 
     backBtn.addEventListener("click", () => {
@@ -63,12 +65,52 @@
         universeScreen.classList.add("hidden");
     });
 
+    /* ---- MUSIC TOGGLE ---- */
+    const musicToggle = document.getElementById("music-toggle");
+    const bgMusic = document.getElementById("bg-music");
+    let isMusicPlaying = false;
+
+    if (musicToggle && bgMusic) {
+        musicToggle.addEventListener("click", () => {
+            if (isMusicPlaying) {
+                bgMusic.pause();
+                musicToggle.querySelector(".text").textContent = "Música: OFF";
+                musicToggle.classList.remove("active");
+            } else {
+                bgMusic.play().catch(e => console.log("Audio play blocked", e));
+                musicToggle.querySelector(".text").textContent = "Música: ON";
+                musicToggle.classList.add("active");
+            }
+            isMusicPlaying = !isMusicPlaying;
+        });
+    }
+
+    /* ---- MUSIC TOGGLE ---- */
+    const musicToggle = document.getElementById("music-toggle");
+    const bgMusic = document.getElementById("bg-music");
+    let isMusicPlaying = false;
+
+    musicToggle.addEventListener("click", () => {
+        if (isMusicPlaying) {
+            bgMusic.pause();
+            musicToggle.querySelector(".text").textContent = "Música: OFF";
+            musicToggle.classList.remove("active");
+        } else {
+            bgMusic.play().catch(e => console.log("Audio play blocked", e));
+            musicToggle.querySelector(".text").textContent = "Música: ON";
+            musicToggle.classList.add("active");
+        }
+        isMusicPlaying = !isMusicPlaying;
+    });
+
     /* ============================
        THREE.JS SCENE
     =========================== */
     let renderer, scene, camera, animFrameId;
+    let composer, bloomPass;
     let starMeshes = [];
-    let nebulaParts, bgStarfield;
+    let nebulaParts, bgStarfield, stardust;
+    let mouseTrail = [];
 
     // Orbit / drag state
     let isDragging = false;
@@ -136,6 +178,23 @@
         pivot.add(lines);
         window._pivot = pivot;
 
+        /* ---- POST-PROCESSING (BLOOM) ---- */
+        const renderScene = new THREE.RenderPass(scene, camera);
+        bloomPass = new THREE.UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            1.5, // Strength
+            0.4, // Radius
+            0.85 // Threshold
+        );
+        
+        composer = new THREE.EffectComposer(renderer);
+        composer.addPass(renderScene);
+        composer.addPass(bloomPass);
+
+        /* ---- DYNAMIC STARDUST ---- */
+        stardust = createStardust(1200);
+        scene.add(stardust);
+
         /* ---- EVENTS ---- */
         setupEvents(canvas);
 
@@ -148,6 +207,7 @@
             camera.aspect = w / h;
             camera.updateProjectionMatrix();
             renderer.setSize(w, h);
+            composer.setSize(w, h);
         });
     }
 
@@ -316,7 +376,25 @@
         if (nebulaParts) nebulaParts.rotation.y = t * 0.01;
         if (bgStarfield) bgStarfield.rotation.y = t * 0.002;
 
-        renderer.render(scene, camera);
+        // Animate stardust
+        if (stardust) {
+            stardust.rotation.y += 0.0005;
+            stardust.position.y = Math.sin(t * 0.5) * 0.2;
+        }
+
+        // Mouse trail animation
+        for (let i = mouseTrail.length - 1; i >= 0; i--) {
+            const p = mouseTrail[i];
+            p.life -= 0.02;
+            p.mesh.material.opacity = p.life;
+            p.mesh.scale.setScalar(p.life);
+            if (p.life <= 0) {
+                scene.remove(p.mesh);
+                mouseTrail.splice(i, 1);
+            }
+        }
+
+        composer.render();
     }
 
     /* ==== EVENTS ==== */
@@ -329,6 +407,11 @@
         });
         // Mouse move
         window.addEventListener("mousemove", e => {
+            const rect = canvas.getBoundingClientRect();
+            const mx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            const my = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+            emitTrail(mx, my);
+
             if (!isDragging) return;
             const dx = e.clientX - prevMouse.x;
             const dy = e.clientY - prevMouse.y;
@@ -427,6 +510,42 @@
     document.addEventListener("keydown", e => {
         if (e.key === "Escape") closeMemoryCard();
     });
+
+    /* ==== DYNAMIC STARDUST ==== */
+    function createStardust(count) {
+        const geo = new THREE.BufferGeometry();
+        const pos = new Float32Array(count * 3);
+        const sizes = new Float32Array(count);
+        for (let i = 0; i < count; i++) {
+            pos[i * 3] = (Math.random() - 0.5) * 60;
+            pos[i * 3 + 1] = (Math.random() - 0.5) * 60;
+            pos[i * 3 + 2] = (Math.random() - 0.5) * 60;
+            sizes[i] = Math.random();
+        }
+        geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+        const mat = new THREE.PointsMaterial({
+            size: 0.05, color: 0xffffff, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false
+        });
+        return new THREE.Points(geo, mat);
+    }
+
+    /* ==== MOUSE TRAIL ==== */
+    function emitTrail(x, y) {
+        if (!camera) return;
+        const ray = new THREE.Raycaster();
+        const m = new THREE.Vector2(x, y);
+        ray.setFromCamera(m, camera);
+        const pos = new THREE.Vector3();
+        ray.ray.at(8, pos); 
+
+        const p = new THREE.Mesh(
+            new THREE.SphereGeometry(0.015, 6, 6),
+            new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 })
+        );
+        p.position.copy(pos);
+        scene.add(p);
+        mouseTrail.push({ mesh: p, life: 1.0 });
+    }
 
     }); // End DOMContentLoaded
 
