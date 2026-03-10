@@ -85,23 +85,7 @@
         });
     }
 
-    /* ---- MUSIC TOGGLE ---- */
-    const musicToggle = document.getElementById("music-toggle");
-    const bgMusic = document.getElementById("bg-music");
-    let isMusicPlaying = false;
 
-    musicToggle.addEventListener("click", () => {
-        if (isMusicPlaying) {
-            bgMusic.pause();
-            musicToggle.querySelector(".text").textContent = "Música: OFF";
-            musicToggle.classList.remove("active");
-        } else {
-            bgMusic.play().catch(e => console.log("Audio play blocked", e));
-            musicToggle.querySelector(".text").textContent = "Música: ON";
-            musicToggle.classList.add("active");
-        }
-        isMusicPlaying = !isMusicPlaying;
-    });
 
     /* ============================
        THREE.JS SCENE
