@@ -245,33 +245,52 @@
         return new THREE.CanvasTexture(canvas);
     }
 
-    /* ==== NEBULA ==== */
+    /* ==== VOLUMETRIC NEBULA ==== */
     function createNebula() {
-        const geo = new THREE.BufferGeometry();
-        const count = 600;
-        const pos = new Float32Array(count * 3);
-        const col = new Float32Array(count * 3);
+        const group = new THREE.Group();
+        const count = 45; // Fewer but larger sprites for volume
+        
+        // Create a soft cloud-like radial gradient
+        const size = 256;
+        const c = document.createElement("canvas");
+        c.width = c.height = size;
+        const ctx = c.getContext("2d");
+        const grad = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+        grad.addColorStop(0, "rgba(255, 255, 255, 1)");
+        grad.addColorStop(0.4, "rgba(255, 255, 255, 0.4)");
+        grad.addColorStop(1, "rgba(255, 255, 255, 0)");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, size, size);
+        const cloudTex = new THREE.CanvasTexture(c);
+
         const nebulaColors = [
-            [0.0, 0.81, 1.0],    // cyan
-            [0.79, 0.50, 1.0],   // violet
-            [1.0, 0.43, 0.71],   // pink
-            [1.0, 0.84, 0.0],    // gold
-            [0.25, 0.88, 0.82],  // teal
+            0x00cfff, // cyan
+            0xc97fff, // violet
+            0xff6eb4, // pink
+            0x25e0c5  // teal
         ];
+
         for (let i = 0; i < count; i++) {
-            pos[i * 3] = (Math.random() - 0.5) * 30;
-            pos[i * 3 + 1] = (Math.random() - 0.5) * 22;
-            pos[i * 3 + 2] = (Math.random() - 0.5) * 20 - 5;
-            const c = nebulaColors[Math.floor(Math.random() * nebulaColors.length)];
-            col[i * 3] = c[0]; col[i * 3 + 1] = c[1]; col[i * 3 + 2] = c[2];
+            const color = nebulaColors[Math.floor(Math.random() * nebulaColors.length)];
+            const mat = new THREE.SpriteMaterial({
+                map: cloudTex, color: color,
+                transparent: true, opacity: 0.12,
+                blending: THREE.AdditiveBlending, depthWrite: false
+            });
+            const sprite = new THREE.Sprite(mat);
+            
+            // Random positions spread out
+            sprite.position.x = (Math.random() - 0.5) * 40;
+            sprite.position.y = (Math.random() - 0.5) * 30;
+            sprite.position.z = (Math.random() - 0.5) * 20 - 5;
+            
+            // Huge scale for volume
+            const scale = 15 + Math.random() * 20;
+            sprite.scale.set(scale, scale, 1);
+            
+            group.add(sprite);
         }
-        geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-        geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
-        const mat = new THREE.PointsMaterial({
-            size: 1.2, vertexColors: true, sizeAttenuation: true,
-            transparent: true, opacity: 0.25, map: particleTexture, depthWrite: false, blending: THREE.AdditiveBlending,
-        });
-        return new THREE.Points(geo, mat);
+        return group;
     }
 
     /* ==== MEMORY STAR (CRYSTALLINE) ==== */
@@ -438,7 +457,48 @@
             }
         }
 
+        // Meteor Shower Animation
+        for (let i = meteors.length - 1; i >= 0; i--) {
+            const m = meteors[i];
+            m.mesh.position.add(m.velocity);
+            m.life -= 0.015;
+            m.mesh.material.opacity = m.life;
+            m.mesh.scale.set(m.life, m.life, m.life * 4); // Stretch as it fades
+            if (m.life <= 0) {
+                scene.remove(m.mesh);
+                meteors.splice(i, 1);
+            }
+        }
+
+        // Random Meteor Spawner
+        if (Math.random() < 0.005) { // 0.5% chance per frame
+            spawnMeteor();
+        }
+
         composer.render();
+    }
+
+    /* ==== METEOR SHOWER ==== */
+    let meteors = [];
+    function spawnMeteor() {
+        if (!scene) return;
+        const color = 0xffffff;
+        const geo = new THREE.SphereGeometry(0.04, 8, 8);
+        const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1 });
+        const mesh = new THREE.Mesh(geo, mat);
+        
+        // Start high up and right
+        mesh.position.set(
+            15 + Math.random() * 10,
+            10 + Math.random() * 10,
+            -10 + Math.random() * 5
+        );
+        
+        // Fast diagonal movement
+        const velocity = new THREE.Vector3(-0.4 - Math.random() * 0.2, -0.3 - Math.random() * 0.2, 0);
+        
+        scene.add(mesh);
+        meteors.push({ mesh, velocity, life: 1.0 });
     }
 
     /* ==== EVENTS ==== */
@@ -520,7 +580,30 @@
         if (hits.length > 0) {
             const hitShell = hits[0].object;
             const found = starMeshes.find(s => s.userData.shell === hitShell);
-            if (found) openMemoryCard(found.mem);
+            if (found && !window._isZooming) {
+                // Camera Zoom
+                window._isZooming = true;
+                
+                // Get target position relative to world
+                const targetPos = new THREE.Vector3();
+                found.group.getWorldPosition(targetPos);
+                
+                // Calculate camera destination (slightly in front of the star)
+                const offset = new THREE.Vector3(0, 0, 4);
+                const camDest = targetPos.clone().add(offset);
+                
+                // Animate camera
+                gsap.to(camera.position, {
+                    x: camDest.x, y: camDest.y, z: camDest.z,
+                    duration: 1.5, ease: "power2.inOut",
+                    onComplete: () => {
+                        openMemoryCard(found.mem);
+                    }
+                });
+                
+                // Center the orbit target
+                gsap.to(targetRot, { x: 0, y: 0, duration: 1.5 });
+            }
         }
     }
 
@@ -534,6 +617,17 @@
         document.getElementById("card-title").textContent = mem.title;
         document.getElementById("card-desc").textContent = mem.description;
 
+        // Image Gallery injection
+        const galleryContainer = document.getElementById("card-gallery");
+        if (galleryContainer) {
+            if (mem.image) {
+                galleryContainer.innerHTML = `<img src="${mem.image}" alt="Memory image" class="memory-photo">`;
+                galleryContainer.style.display = "block";
+            } else {
+                galleryContainer.style.display = "none";
+            }
+        }
+
         // Tint the card glow color
         overlay.style.setProperty("--card-accent", mem.color);
         const card = document.getElementById("memory-card");
@@ -543,10 +637,6 @@
         overlay.classList.remove("hidden");
     }
 
-    function closeMemoryCard() {
-        overlay.classList.add("hidden");
-    }
-
     cardClose.addEventListener("click", closeMemoryCard);
     overlay.addEventListener("click", e => {
         if (e.target === overlay) closeMemoryCard();
@@ -554,6 +644,18 @@
     document.addEventListener("keydown", e => {
         if (e.key === "Escape") closeMemoryCard();
     });
+
+    function closeMemoryCard() {
+        overlay.classList.add("hidden");
+        // Zoom out smoothly
+        gsap.to(camera.position, {
+            x: 0, y: 0, z: 10,
+            duration: 1.5, ease: "power2.out",
+            onComplete: () => {
+                window._isZooming = false;
+            }
+        });
+    }
 
     /* ==== DYNAMIC STARDUST ==== */
     function createStardust(count) {

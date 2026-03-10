@@ -463,6 +463,28 @@ body {
   font-weight: 300;
   line-height: 1.75;
   color: rgba(220, 210, 255, 0.85);
+  margin-bottom: 1.5rem;
+}
+
+#card-gallery {
+  margin: 1.5rem 0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.memory-photo {
+  width: 100%;
+  height: auto;
+  max-height: 250px;
+  object-fit: cover;
+  display: block;
+  border-radius: 12px;
+  transition: transform 0.5s ease;
+}
+
+.memory-photo:hover {
+  transform: scale(1.05);
 }
 
 .card-footer {
