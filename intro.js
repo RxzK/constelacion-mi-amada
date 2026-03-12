@@ -314,14 +314,27 @@
             emissiveMap: iceBlockTex,
         });
 
-        // Main dome (half sphere) — with ice blocks
-        const domeGeo = new THREE.SphereGeometry(3.5, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-        const dome = new THREE.Mesh(domeGeo, iceBlockMat);
-        dome.castShadow = true;
-        dome.receiveShadow = true;
-        iglooGroup.add(dome);
+        // Use the generated obj model instead of basic primitives for the dome and tunnel
+        const loader = new THREE.OBJLoader();
+        loader.load('igloo.obj', function (object) {
+            object.traverse(function (child) {
+                if (child.isMesh) {
+                    child.material = iceBlockMat;
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    
+                    // Add slight bevel/smoothness to blocks
+                    child.geometry.computeVertexNormals();
+                }
+            });
+            
+            // Adjust obj scale and position to fit our scene
+            object.scale.set(1.0, 1.0, 1.0);
+            object.position.set(0, 0, 0); 
+            iglooGroup.add(object);
+        });
 
-        // Snow cap on top
+        // Keep the snow cap on top
         const capGeo = new THREE.SphereGeometry(3.7, 24, 8, 0, Math.PI * 2, 0, Math.PI / 6);
         const capMat = new THREE.MeshStandardMaterial({
             color: 0xf0f5ff, roughness: 0.9, metalness: 0,
@@ -329,25 +342,6 @@
         const cap = new THREE.Mesh(capGeo, capMat);
         cap.castShadow = true;
         iglooGroup.add(cap);
-
-        // Entrance tunnel — also with ice blocks
-        const tunnelGeo = new THREE.CylinderGeometry(1.2, 1.4, 3, 16, 1, true, 0, Math.PI);
-        tunnelGeo.rotateZ(Math.PI / 2);
-        tunnelGeo.rotateY(Math.PI / 2);
-        const tunnel = new THREE.Mesh(tunnelGeo, iceBlockMat);
-        tunnel.position.set(0, 0.8, 3.8);
-        tunnel.castShadow = true;
-        tunnel.receiveShadow = true;
-        iglooGroup.add(tunnel);
-
-        // Entrance tunnel roof
-        const roofGeo = new THREE.CylinderGeometry(1.3, 1.5, 3.2, 16, 1, false, 0, Math.PI);
-        roofGeo.rotateZ(Math.PI / 2);
-        roofGeo.rotateY(Math.PI / 2);
-        const roof = new THREE.Mesh(roofGeo, iceBlockMat.clone());
-        roof.position.set(0, 0.85, 4);
-        roof.castShadow = true;
-        iglooGroup.add(roof);
 
         // Entrance opening (dark hole)
         const entranceGeo = new THREE.CircleGeometry(1.0, 16);
