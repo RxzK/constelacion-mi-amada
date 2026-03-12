@@ -31,8 +31,8 @@
 
         /* ---- SCENE ---- */
         introScene = new THREE.Scene();
-        introScene.background = new THREE.Color(0x010512);
-        introScene.fog = new THREE.FogExp2(0x010512, 0.012);
+        introScene.background = new THREE.Color(0x020a24);
+        introScene.fog = new THREE.FogExp2(0x020a24, 0.012);
 
         /* ---- CAMERA ---- */
         introCamera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 500);
@@ -147,20 +147,35 @@
         iglooGroup = new THREE.Group();
         iglooGroup.position.set(0, -2, 0);
 
-        // Premium Ice Material
+        // 1:1 Reference Ice Material (Frosted & Structured)
         const iceBlockMat = new THREE.MeshPhysicalMaterial({
-            color: 0xccf0ff,
-            emissive: 0x004488,
-            emissiveIntensity: 0.35,
+            color: 0xddeeff,
+            emissive: 0x2288ff,
+            emissiveIntensity: 0.15,
             metalness: 0.1,
-            roughness: 0.15,
-            transmission: 0.75, // r128 compatible
-            ior: 1.31,
+            roughness: 0.25, // More frosted than glass
+            transmission: 0.65, 
+            ior: 1.34, 
             transparent: true,
             opacity: 1.0,
-            reflectivity: 0.5,
-            clearcoat: 1.0,
+            reflectivity: 0.3,
+            clearcoat: 0.8,
+            clearcoatRoughness: 0.1
         });
+
+        // Mortar / Inner Fill (This makes the white lines between blocks)
+        const mortarMat = new THREE.MeshStandardMaterial({
+            color: 0xbbddff,
+            emissive: 0x88ccff,
+            emissiveIntensity: 0.4,
+            roughness: 1.0,
+            side: THREE.BackSide // To see from inside too
+        });
+        const mortarDom = new THREE.Mesh(
+            new THREE.SphereGeometry(3.7, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2),
+            mortarMat
+        );
+        iglooGroup.add(mortarDom);
 
         const loader = new THREE.OBJLoader();
         loader.load('igloo.obj', function (object) {

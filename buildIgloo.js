@@ -85,10 +85,10 @@ class ObjWriter {
 function buildIglooObj() {
     const writer = new ObjWriter();
     
-    const radius = 3.6;
-    const blockH = 0.55;
-    const rows = 9;
-    const blockD = 0.7; // thickness for volume
+    const radius = 3.8;
+    const blockH = 0.65;
+    const rows = 7;
+    const blockD = 0.5; // thickness 
 
     // Tiers of the dome
     for (let r = 0; r < rows; r++) {
@@ -98,16 +98,16 @@ function buildIglooObj() {
         const yCurrent = radius * Math.sin(theta1);
         
         const circ = 2 * Math.PI * rCurrent;
-        // Target block width is ~0.85
-        const numBlocks = Math.max(1, Math.floor(circ / 0.85));
+        // Target block width is much larger ~1.35
+        const numBlocks = Math.max(1, Math.floor(circ / 1.35));
         const angleStep = (Math.PI * 2) / numBlocks;
 
         for (let i = 0; i < numBlocks; i++) {
             const angle = i * angleStep;
             
             // Door cutout
-            if (r < 3) {
-                if (angle > Math.PI*0.38 && angle < Math.PI*0.62) {
+            if (r < 2) {
+                if (angle > Math.PI*0.35 && angle < Math.PI*0.65) {
                     continue; 
                 }
             }
@@ -119,44 +119,41 @@ function buildIglooObj() {
             const rotX = -theta1 * Math.sin(angle);
             const rotZ = theta1 * Math.cos(angle);
             
-            // Irregularity factor (Jitter)
-            const jitterX = (Math.random() - 0.5) * 0.15;
-            const jitterZ = (Math.random() - 0.5) * 0.15;
-            const jitterRot = (Math.random() - 0.5) * 0.1;
-            const sizeMod = 0.9 + Math.random() * 0.2;
+            // Very minimal jitter for an "architectural" look
+            const jitterX = (Math.random() - 0.5) * 0.02;
+            const jitterZ = (Math.random() - 0.5) * 0.02;
 
-            const bw = (circ / numBlocks) * 0.92; // Slight gaps
+            const bw = (circ / numBlocks) * 0.95; // Slight gaps for mortar 
             writer.addBox(
-                bw * sizeMod, 
-                blockH * 0.92 * sizeMod, 
-                blockD * sizeMod,
+                bw, 
+                blockH * 0.95, 
+                blockD,
                 x + jitterX, 
-                yCurrent + blockH/2 + (Math.random()-0.5)*0.05, 
+                yCurrent + blockH/2, 
                 z + jitterZ,
-                -angle + jitterRot, 
-                rotX + (Math.random()-0.5)*0.05, 
-                rotZ + (Math.random()-0.5)*0.05
+                -angle, 
+                rotX, 
+                rotZ
             );
         }
     }
 
-    // High-fidelity Tunnel
-    const tLength = 5;
-    const tWidth = 1.3;
-    const tHeight = 1.4;
-    for (let i = 0; i < 6; i++) { 
-        const tz = radius + 0.2 + (i * 0.55);
-        for (let j = 0; j < 7; j++) { 
-            const tAngle = (j / 6) * Math.PI;
+    // High-fidelity Tunnel (Structured)
+    const tWidth = 1.4;
+    const tHeight = 1.5;
+    for (let i = 0; i < 4; i++) { 
+        const tz = radius + 0.3 + (i * 0.8);
+        for (let j = 0; j < 5; j++) { 
+            const tAngle = (j / 4) * Math.PI;
             const tx = Math.cos(tAngle) * tWidth;
             const ty = Math.sin(tAngle) * tHeight;
             
             writer.addBox(
-                0.65, 0.45, 0.55,
-                tx + (Math.random()-0.5)*0.1, 
-                ty + 0.2 + (Math.random()-0.5)*0.1, 
+                1.1, 0.7, 0.7,
+                tx, 
+                ty + 0.2, 
                 tz,
-                0, (Math.random()-0.5)*0.1, tAngle + (Math.random()-0.5)*0.1
+                0, 0, tAngle
             );
         }
     }
