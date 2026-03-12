@@ -248,56 +248,103 @@
         introScene.add(snowParticles);
     }
 
+    /* ==== ICE BLOCK TEXTURE GENERATOR ==== */
+    function generateIceBlockTexture() {
+        const c = document.createElement("canvas");
+        c.width = 512;
+        c.height = 256;
+        const ctx = c.getContext("2d");
+
+        // Base color (mostly transparent, handles emit map)
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0, 0, 512, 256);
+
+        // Draw grid
+        const rows = 8;
+        const cols = 16;
+        const w = 512 / cols;
+        const h = 256 / rows;
+
+        ctx.strokeStyle = "#44ccff"; // Cyan glow color
+        ctx.lineWidth = 4;
+        ctx.lineJoin = "round";
+
+        for (let r = 0; r < rows; r++) {
+            const offset = (r % 2 === 0) ? 0 : w / 2;
+            for (let c = 0; c < cols + 1; c++) {
+                const x = c * w - offset;
+                const y = r * h;
+                
+                // Draw block outline
+                ctx.strokeRect(x, y, w, h);
+                
+                // Inner glow (softer lines)
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = "rgba(100, 220, 255, 0.4)";
+                ctx.strokeRect(x + 2, y + 2, w - 4, h - 4);
+                
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = "#44ccff";
+            }
+        }
+
+        const tex = new THREE.CanvasTexture(c);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(2, 2);
+        return tex;
+    }
+
     /* ==== IGLOO ==== */
     function createIgloo() {
         iglooGroup = new THREE.Group();
         iglooGroup.position.set(0, -2, 0);
 
-        // Snow block material
-        const snowMat = new THREE.MeshStandardMaterial({
-            color: 0xe0eef8,
-            roughness: 0.75,
-            metalness: 0.05,
+        // Generate ice block texture with glowing seams
+        const iceBlockTex = generateIceBlockTexture();
+
+        // Ice block material (with seam glow)
+        const iceBlockMat = new THREE.MeshStandardMaterial({
+            map: iceBlockTex,
+            color: 0xb8d4e8,
+            roughness: 0.4,
+            metalness: 0.15,
+            emissive: 0x004466,
+            emissiveIntensity: 0.3,
+            emissiveMap: iceBlockTex,
         });
 
-        // Main dome (half sphere)
+        // Main dome (half sphere) — with ice blocks
         const domeGeo = new THREE.SphereGeometry(3.5, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-        const dome = new THREE.Mesh(domeGeo, snowMat);
+        const dome = new THREE.Mesh(domeGeo, iceBlockMat);
         dome.castShadow = true;
         dome.receiveShadow = true;
         iglooGroup.add(dome);
 
-        // Snow cap on top (slightly larger, flatter)
+        // Snow cap on top
         const capGeo = new THREE.SphereGeometry(3.7, 24, 8, 0, Math.PI * 2, 0, Math.PI / 6);
         const capMat = new THREE.MeshStandardMaterial({
-            color: 0xf0f5ff,
-            roughness: 0.9,
-            metalness: 0,
+            color: 0xf0f5ff, roughness: 0.9, metalness: 0,
         });
         const cap = new THREE.Mesh(capGeo, capMat);
         cap.castShadow = true;
         iglooGroup.add(cap);
 
-        // Entrance tunnel
+        // Entrance tunnel — also with ice blocks
         const tunnelGeo = new THREE.CylinderGeometry(1.2, 1.4, 3, 16, 1, true, 0, Math.PI);
         tunnelGeo.rotateZ(Math.PI / 2);
         tunnelGeo.rotateY(Math.PI / 2);
-        const tunnel = new THREE.Mesh(tunnelGeo, snowMat);
+        const tunnel = new THREE.Mesh(tunnelGeo, iceBlockMat);
         tunnel.position.set(0, 0.8, 3.8);
         tunnel.castShadow = true;
         tunnel.receiveShadow = true;
         iglooGroup.add(tunnel);
 
-        // Entrance tunnel roof (half cylinder for the top)
+        // Entrance tunnel roof
         const roofGeo = new THREE.CylinderGeometry(1.3, 1.5, 3.2, 16, 1, false, 0, Math.PI);
         roofGeo.rotateZ(Math.PI / 2);
         roofGeo.rotateY(Math.PI / 2);
-        const roofMat = new THREE.MeshStandardMaterial({
-            color: 0xd8e8f5,
-            roughness: 0.8,
-            metalness: 0.05,
-        });
-        const roof = new THREE.Mesh(roofGeo, roofMat);
+        const roof = new THREE.Mesh(roofGeo, iceBlockMat.clone());
         roof.position.set(0, 0.85, 4);
         roof.castShadow = true;
         iglooGroup.add(roof);
