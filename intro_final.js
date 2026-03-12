@@ -98,31 +98,49 @@ function createBeveledIgloo() {
     iglooGroup = new THREE.Group();
     iglooGroup.position.set(0, -0.1, 0);
 
+    // Procedural Ice Bump Map
+    const iceNoiseTex = createIceNoiseTexture();
+    
+    // Cloudier, rougher ice material
     const iceBlockMat = new THREE.MeshPhysicalMaterial({
         color: 0xeefbff,
-        emissive: 0x44aaff,
-        emissiveIntensity: 0.2,
-        roughness: 0.35,
+        emissive: 0x44abff,
+        emissiveIntensity: 0.15,
+        roughness: 0.75, // Much rougher for 'frosted' look
         metalness: 0,
-        transmission: 0.9, 
-        ior: 1.31,        
-        thickness: 2.5,   
-        specularIntensity: 1.0,
-        clearcoat: 0.5,
-        transparent: true
+        transmission: 0.8, // Less transparent
+        ior: 1.33,        
+        thickness: 4.0,   // Thicker to diffuse light more
+        specularIntensity: 0.5,
+        clearcoat: 0.3,
+        clearcoatRoughness: 0.6,
+        transparent: true,
+        normalMap: iceNoiseTex,
+        normalScale: new THREE.Vector2(0.5, 0.5)
     });
 
-    const bevelRadius = 0.06;
-    const blockD = 0.35;
-    const blockH = 0.55;
+    const bevelRadius = 0.08; // Softer edges
+    const blockD = 0.38; // Thicker blocks
+    const blockH = 0.58;
     const domeRadius = 3.6;
 
-    // Use a shared geometry for performance
+    // Shared geometry
+    const geo = new RoundedBoxGeometry(1, 1, 1, 3, bevelRadius);
+
     const addBlock = (w, h, d, pos, rot) => {
-        const geo = new RoundedBoxGeometry(w, h, d, 2, bevelRadius);
         const mesh = new THREE.Mesh(geo, iceBlockMat);
-        mesh.position.set(pos.x, pos.y, pos.z);
-        mesh.rotation.set(rot.x, rot.y, rot.z);
+        mesh.scale.set(w, h, d);
+        
+        // Organic Jitter ("Hand-built" look)
+        const jRotX = (Math.random() - 0.5) * 0.1;
+        const jRotY = (Math.random() - 0.5) * 0.1;
+        const jRotZ = (Math.random() - 0.5) * 0.1;
+        const jPosX = (Math.random() - 0.5) * 0.06;
+        const jPosY = (Math.random() - 0.5) * 0.04;
+        const jPosZ = (Math.random() - 0.5) * 0.06;
+        
+        mesh.position.set(pos.x + jPosX, pos.y + jPosY, pos.z + jPosZ);
+        mesh.rotation.set(rot.x + jRotX, rot.y + jRotY, rot.z + jRotZ);
         iglooGroup.add(mesh);
     };
 
@@ -142,14 +160,16 @@ function createBeveledIgloo() {
         if (theta > (Math.PI/2) * 0.9) continue; 
         const radiusAtTheta = domeRadius * Math.cos(theta);
         const circ = 2 * Math.PI * radiusAtTheta;
-        const numBlocks = Math.max(1, Math.floor(circ / 1.5));
+        // Divide by a larger number to make gaps wider for light bleeding
+        const numBlocks = Math.max(1, Math.floor(circ / 1.7)); 
         const angleStep = (Math.PI * 2) / numBlocks;
         const stagger = (r % 2 === 0) ? 0 : angleStep / 2;
         for (let i = 0; i < numBlocks; i++) {
             const phi = i * angleStep + stagger;
             if (theta < 0.6 && (phi < 0.4 || phi > Math.PI*2 - 0.4)) continue;
-            const bw = (circ / numBlocks) * 0.94;
-            addDomeBlock(bw, blockH * 0.94, blockD, domeRadius, phi, theta);
+            // Blocks are slightly smaller than the step to leave gaps
+            const bw = (circ / numBlocks) * 0.90; 
+            addDomeBlock(bw, blockH * 0.90, blockD, domeRadius, phi, theta);
         }
     }
 
@@ -199,6 +219,32 @@ function createBeveledIgloo() {
     iglooGroup.userData.spill = spill;
 
     introScene.add(iglooGroup);
+}
+
+function createIceNoiseTexture() {
+    const size = 512;
+    const canvas = document.createElement("canvas");
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    const imgData = ctx.createImageData(size, size);
+    
+    // Simple white noise for bump
+    for (let i = 0; i < imgData.data.length; i += 4) {
+        const val = Math.random() * 255;
+        // Smooth it slightly by blending with neighbors would be ideal, 
+        // but raw noise creates a nice "frost" grain when used as a normal map
+        imgData.data[i] = val;
+        imgData.data[i+1] = val;
+        imgData.data[i+2] = 255; // Normal map Z is full
+        imgData.data[i+3] = 255;
+    }
+    ctx.putImageData(imgData, 0, 0);
+    
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(4, 2);
+    return tex;
 }
 
 function createGlowTexture() {
