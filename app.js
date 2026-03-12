@@ -45,24 +45,46 @@
 
     let sceneInitialized = false;
 
+    // Initialize the 3D intro scene immediately
+    if (window.initIntroScene) {
+        window.initIntroScene();
+    }
+
     enterBtn.addEventListener("click", () => {
-        gsap.to(introScreen, { opacity: 0, duration: 1, onComplete: () => {
-            introScreen.classList.add("hidden");
-            universeScreen.classList.remove("hidden");
-            if (!sceneInitialized) {
-                initThreeJS();
-                sceneInitialized = true;
-            }
-            // Warp effect transition
-            gsap.fromTo(camera.position, { z: 50 }, { z: 10, duration: 2.5, ease: "power2.out" });
-            gsap.fromTo(bloomPass, { strength: 10 }, { strength: 1.5, duration: 3 });
-        }});
+        // Fade out the floating UI
+        const overlay = document.getElementById("intro-overlay");
+        gsap.to(overlay, { opacity: 0, duration: 0.8 });
+
+        // Trigger the cinematic camera-rockets-upward transition
+        if (window.triggerIntroTransition) {
+            window.triggerIntroTransition(() => {
+                // Called after the white-out completes
+                introScreen.classList.add("hidden");
+                universeScreen.classList.remove("hidden");
+                if (!sceneInitialized) {
+                    initThreeJS();
+                    sceneInitialized = true;
+                }
+                // Warp effect into constellation
+                gsap.fromTo(camera.position, { z: 50 }, { z: 10, duration: 2.5, ease: "power2.out" });
+                gsap.fromTo(bloomPass, { strength: 10 }, { strength: 1.5, duration: 3 });
+            });
+        }
     });
 
     backBtn.addEventListener("click", () => {
         introScreen.classList.remove("hidden");
-        introScreen.classList.remove("fade-out");
         universeScreen.classList.add("hidden");
+        // Re-init the intro scene
+        if (window.initIntroScene) {
+            window.initIntroScene();
+        }
+        // Show the overlay again
+        const overlay = document.getElementById("intro-overlay");
+        if (overlay) overlay.style.opacity = "1";
+        // Reset the white-out
+        const whiteout = document.getElementById("intro-whiteout");
+        if (whiteout) whiteout.style.opacity = "0";
     });
 
     /* ---- MUSIC TOGGLE ---- */

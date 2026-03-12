@@ -12,57 +12,62 @@
 </head>
 <body>
 
-  <!-- INTRO SCREEN -->
+  <!-- 3D INTRO SCENE -->
   <div id="intro-screen">
-    <!-- Music Toggle -->
-    <button id="music-toggle" class="music-btn" title="Activar/Desactivar Música">
-      <span class="icon">♪</span>
-      <span class="text">Música: OFF</span>
-    </button>
-    <audio id="bg-music" loop>
-      <source src="https://www.chosic.com/wp-content/uploads/2021/04/And-So-It-Begins-Inspired-By-Crush-By-Sarcastic-Sounds.mp3" type="audio/mpeg">
-    </audio>
+    <canvas id="intro-canvas"></canvas>
+    
+    <!-- White-out transition overlay -->
+    <div id="intro-whiteout"></div>
 
-    <div class="intro-content">
-      <div class="stars-bg"></div>
-      <div class="nebula-glow"></div>
-
-      <div class="intro-date-badge">20 · ENE · 2026</div>
-
-      <h1 class="intro-title">
-        <span class="title-line1">Nuestro Universo,</span>
-        <span class="title-line2">Karla</span>
-      </h1>
-
-      <p id="subtitle-text" class="intro-subtitle"></p>
-
-      <div class="counter-strip">
-        <div class="counter-item">
-          <span id="cnt-days" class="cnt-val">0</span>
-          <span class="cnt-label">días</span>
-        </div>
-        <div class="counter-divider">·</div>
-        <div class="counter-item">
-          <span id="cnt-hours" class="cnt-val">0</span>
-          <span class="cnt-label">horas</span>
-        </div>
-        <div class="counter-divider">·</div>
-        <div class="counter-item">
-          <span id="cnt-mins" class="cnt-val">0</span>
-          <span class="cnt-label">minutos</span>
-        </div>
-        <div class="counter-divider">·</div>
-        <div class="counter-item">
-          <span id="cnt-secs" class="cnt-val">0</span>
-          <span class="cnt-label">segundos</span>
-        </div>
-      </div>
-      <p class="counter-caption">juntos, desde el primer "¿juegas Fortnite?"</p>
-
-      <button id="enter-btn" class="enter-btn">
-        <span>Explorar el Universo</span>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    <!-- Floating UI Overlay -->
+    <div id="intro-overlay">
+      <!-- Music Toggle -->
+      <button id="music-toggle" class="music-btn" title="Activar/Desactivar Música">
+        <span class="icon">♪</span>
+        <span class="text">Música: OFF</span>
       </button>
+      <audio id="bg-music" loop>
+        <source src="https://www.chosic.com/wp-content/uploads/2021/04/And-So-It-Begins-Inspired-By-Crush-By-Sarcastic-Sounds.mp3" type="audio/mpeg">
+      </audio>
+
+      <div class="intro-floating-content">
+        <div class="intro-date-badge">20 · ENE · 2026</div>
+
+        <h1 class="intro-title">
+          <span class="title-line1">Nuestro Universo,</span>
+          <span class="title-line2">Karla</span>
+        </h1>
+
+        <p id="subtitle-text" class="intro-subtitle"></p>
+
+        <div class="counter-strip">
+          <div class="counter-item">
+            <span id="cnt-days" class="cnt-val">0</span>
+            <span class="cnt-label">días</span>
+          </div>
+          <div class="counter-divider">·</div>
+          <div class="counter-item">
+            <span id="cnt-hours" class="cnt-val">0</span>
+            <span class="cnt-label">horas</span>
+          </div>
+          <div class="counter-divider">·</div>
+          <div class="counter-item">
+            <span id="cnt-mins" class="cnt-val">0</span>
+            <span class="cnt-label">minutos</span>
+          </div>
+          <div class="counter-divider">·</div>
+          <div class="counter-item">
+            <span id="cnt-secs" class="cnt-val">0</span>
+            <span class="cnt-label">segundos</span>
+          </div>
+        </div>
+        <p class="counter-caption">juntos, desde el primer "¿juegas Fortnite?"</p>
+
+        <button id="enter-btn" class="enter-btn">
+          <span>Explorar el Universo</span>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -138,7 +143,8 @@
   <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   
-  <script src="memories.js?v=1.0.1"></script>
-  <script src="app.js?v=1.0.1"></script>
+  <script src="memories.js?v=1.0.2"></script>
+  <script src="intro.js?v=1.0.2"></script>
+  <script src="app.js?v=1.0.2"></script>
 </body>
 </html>
