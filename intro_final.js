@@ -25,8 +25,8 @@ window.initIntroScene = function () {
 
     /* ---- SCENE ---- */
     introScene = new THREE.Scene();
-    introScene.background = new THREE.Color(0x020a24);
-    introScene.fog = new THREE.FogExp2(0x020a24, 0.015);
+    introScene.background = new THREE.Color(0xddeeff); // Bright icy sky
+    introScene.fog = new THREE.FogExp2(0xddeeff, 0.04); // Thick white fog
 
     /* ---- CAMERA ---- */
     introCamera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 500);
@@ -34,15 +34,15 @@ window.initIntroScene = function () {
     introCamera.lookAt(0, 2, 0);
 
     /* ---- LIGHTS ---- */
-    const moonLight = new THREE.DirectionalLight(0x7dadff, 2.0);
+    const moonLight = new THREE.DirectionalLight(0xffffff, 3.0);
     moonLight.position.set(15, 25, 10);
     introScene.add(moonLight);
 
-    const rimLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    const rimLight = new THREE.DirectionalLight(0xaaddff, 2.0);
     rimLight.position.set(-15, 10, -20);
     introScene.add(rimLight);
 
-    const ambient = new THREE.AmbientLight(0x1a2a5a, 0.6);
+    const ambient = new THREE.AmbientLight(0xffffff, 1.0);
     introScene.add(ambient);
 
     /* ---- BUILDER FUNCTIONS ---- */
@@ -54,7 +54,9 @@ window.initIntroScene = function () {
     const renderScene = new RenderPass(introScene, introCamera);
     introBloom = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
-        2.5, 0.5, 0.8
+        3.5, // MASSIVE Strength
+        1.5, // Large Radius
+        0.1  // VERY LOW Threshold (everything bleeds)
     );
     introComposer = new EffectComposer(introRenderer);
     introComposer.addPass(renderScene);
@@ -86,8 +88,9 @@ function createCinematicTerrain() {
         pos.setY(i, y);
     }
     geo.computeVertexNormals();
-    const mat = new THREE.MeshPhysicalMaterial({
-        color: 0xeef8ff, roughness: 0.95, metalness: 0
+    const mat = new THREE.MeshStandardMaterial({
+        color: 0xffffff, roughness: 1.0, metalness: 0.0,
+        emissive: 0x88bbff, emissiveIntensity: 0.1
     });
     const terrain = new THREE.Mesh(geo, mat);
     terrain.position.y = -2;
@@ -98,30 +101,20 @@ function createBeveledIgloo() {
     iglooGroup = new THREE.Group();
     iglooGroup.position.set(0, -0.1, 0);
 
-    // Procedural Ice Bump Map
-    const iceNoiseTex = createIceNoiseTexture();
-    
-    // Cloudier, rougher ice material
-    const iceBlockMat = new THREE.MeshPhysicalMaterial({
-        color: 0xeefbff,
-        emissive: 0x44abff,
-        emissiveIntensity: 0.15,
-        roughness: 0.75, // Much rougher for 'frosted' look
-        metalness: 0,
-        transmission: 0.8, // Less transparent
-        ior: 1.33,        
-        thickness: 4.0,   // Thicker to diffuse light more
-        specularIntensity: 0.5,
-        clearcoat: 0.3,
-        clearcoatRoughness: 0.6,
+    // Aggressive Stylized Glow Material
+    const iceBlockMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        emissive: 0xaaddff, // Very strong icy blue glow
+        emissiveIntensity: 0.8,
+        roughness: 1.0, 
+        metalness: 0.0,
         transparent: true,
-        normalMap: iceNoiseTex,
-        normalScale: new THREE.Vector2(0.5, 0.5)
+        opacity: 0.95 // Almost solid, relies on glow
     });
 
-    const bevelRadius = 0.08; // Softer edges
-    const blockD = 0.38; // Thicker blocks
-    const blockH = 0.58;
+    const bevelRadius = 0.08; 
+    const blockD = 0.50; // VERY Thicker blocks to overlap
+    const blockH = 0.65; // Taller blocks to overlap
     const domeRadius = 3.6;
 
     // Shared geometry
@@ -160,16 +153,16 @@ function createBeveledIgloo() {
         if (theta > (Math.PI/2) * 0.9) continue; 
         const radiusAtTheta = domeRadius * Math.cos(theta);
         const circ = 2 * Math.PI * radiusAtTheta;
-        // Divide by a larger number to make gaps wider for light bleeding
-        const numBlocks = Math.max(1, Math.floor(circ / 1.7)); 
+        // Use max blocks, no gaps. We want them to overlap.
+        const numBlocks = Math.max(1, Math.floor(circ / 1.4)); 
         const angleStep = (Math.PI * 2) / numBlocks;
         const stagger = (r % 2 === 0) ? 0 : angleStep / 2;
         for (let i = 0; i < numBlocks; i++) {
             const phi = i * angleStep + stagger;
             if (theta < 0.6 && (phi < 0.4 || phi > Math.PI*2 - 0.4)) continue;
-            // Blocks are slightly smaller than the step to leave gaps
-            const bw = (circ / numBlocks) * 0.90; 
-            addDomeBlock(bw, blockH * 0.90, blockD, domeRadius, phi, theta);
+            // Blocks are WIDER than the step to overlap
+            const bw = (circ / numBlocks) * 1.1; 
+            addDomeBlock(bw, blockH, blockD, domeRadius, phi, theta);
         }
     }
 
@@ -183,7 +176,8 @@ function createBeveledIgloo() {
             const x = Math.cos(archAngle) * tWidth;
             const y = Math.sin(archAngle) * tHeight;
             const staggerY = (i % 2 === 0) ? 0 : 0.05;
-            addBlock(1.0, 0.6, 0.5, { x: x, y: y + staggerY, z: zDist }, { x: 0, y: 0, z: archAngle - Math.PI/2 });
+            // Overlapping blocks (1.2 instead of 1.0)
+            addBlock(1.2, 0.7, 0.7, { x: x, y: y + staggerY, z: zDist }, { x: 0, y: 0, z: archAngle - Math.PI/2 });
         }
     }
 
@@ -196,7 +190,8 @@ function createBeveledIgloo() {
             const phi = (i / numCBlocks) * Math.PI * 2 + (r * 0.3);
             const cx = Math.cos(phi) * chimneyRadius;
             const cz = Math.sin(phi) * chimneyRadius;
-            addBlock(0.8, 0.5, 0.4, { x: cx, y: cY, z: cz }, { x: 0, y: -phi + Math.PI/2, z: 0 });
+            // Overlapping blocks
+            addBlock(1.1, 0.6, 0.6, { x: cx, y: cY, z: cz }, { x: 0, y: -phi + Math.PI/2, z: 0 });
         }
     }
 
