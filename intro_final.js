@@ -34,15 +34,15 @@ window.initIntroScene = function () {
     introCamera.lookAt(0, 2, 0);
 
     /* ---- LIGHTS ---- */
-    const moonLight = new THREE.DirectionalLight(0xffffff, 3.0);
+    const moonLight = new THREE.DirectionalLight(0xffffff, 1.2);
     moonLight.position.set(15, 25, 10);
     introScene.add(moonLight);
 
-    const rimLight = new THREE.DirectionalLight(0xaaddff, 2.0);
+    const rimLight = new THREE.DirectionalLight(0xaaddff, 1.0);
     rimLight.position.set(-15, 10, -20);
     introScene.add(rimLight);
 
-    const ambient = new THREE.AmbientLight(0xffffff, 1.0);
+    const ambient = new THREE.AmbientLight(0xffffff, 0.4);
     introScene.add(ambient);
 
     /* ---- BUILDER FUNCTIONS ---- */
@@ -54,9 +54,9 @@ window.initIntroScene = function () {
     const renderScene = new RenderPass(introScene, introCamera);
     introBloom = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
-        2.0, // Strength
+        1.5, // Strength (slightly reduced so it's not blinding)
         0.8, // Radius
-        0.5  // Threshold (only emissive things bleed)
+        1.0  // Threshold (Only highly lit/emissive things like the igloo bleed!)
     );
     introComposer = new EffectComposer(introRenderer);
     introComposer.addPass(renderScene);
@@ -89,8 +89,8 @@ function createCinematicTerrain() {
     }
     geo.computeVertexNormals();
     const mat = new THREE.MeshStandardMaterial({
-        color: 0xffffff, roughness: 1.0, metalness: 0.0,
-        emissive: 0x88bbff, emissiveIntensity: 0.1
+        color: 0xaaaaaa, roughness: 1.0, metalness: 0.0,
+        emissive: 0x88bbff, emissiveIntensity: 0.05
     });
     const terrain = new THREE.Mesh(geo, mat);
     terrain.position.y = -2;
@@ -105,7 +105,7 @@ function createBeveledIgloo() {
     const iceBlockMat = new THREE.MeshStandardMaterial({
         color: 0xeefbff,
         emissive: 0x2288ff, // Strong icy blue glow
-        emissiveIntensity: 0.8,
+        emissiveIntensity: 2.5, // Pushed way past 1.0 to force bloom
         roughness: 0.5, 
         metalness: 0.0,
         transparent: true,
