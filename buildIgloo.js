@@ -7,166 +7,150 @@ class ObjWriter {
         this.vertexOffset = 1;
     }
 
-    // Aligns a box to a sphere surface at (phi, theta)
-    addArchitecturalBlock(w, h, d, radius, phi, theta) {
+    // Aligns a box to a surface at given position and Euler-like rotation
+    addBlock(w, h, d, pos, rot) {
         const hw = w / 2;
         const hh = h / 2;
         const hd = d / 2;
 
-        // Base box at (0, radius, 0)
-        // x = width, y = thickness/depth, z = height
         const baseVerts = [
-            [-hw,  hd,  hh], [ hw,  hd,  hh], [ hw,  hd, -hh], [-hw,  hd, -hh], // Top/Outer face
-            [-hw, -hd,  hh], [ hw, -hd,  hh], [ hw, -hd, -hh], [-hw, -hd, -hh], // Bottom/Inner face
+            [-hw, -hd,  hh], [ hw, -hd,  hh], [ hw, -hd, -hh], [-hw, -hd, -hh], // Inner face
+            [-hw,  hd,  hh], [ hw,  hd,  hh], [ hw,  hd, -hh], [-hw,  hd, -hh], // Outer face
         ];
 
-        // Rotation matrices
-        const cp = Math.cos(phi), sp = Math.sin(phi);
-        const ct = Math.cos(theta), st = Math.sin(theta);
+        const { x: rx, y: ry, z: rz } = rot;
+        const cx = Math.cos(rx), sx = Math.sin(rx);
+        const cy = Math.cos(ry), sy = Math.sin(ry);
+        const cz = Math.cos(rz), sz = Math.sin(rz);
 
         const transformedVerts = baseVerts.map(v => {
-            let px = v[0], py = v[1] + radius, pz = v[2];
+            let x = v[0], y = v[1], z = v[2];
 
-            // 1. Rotate around Z (theta - latitude) - NOT THIS
-            // Correct spherical transform:
-            // Point (0, R, 0) rotated by theta around X, then phi around Y.
-            
-            // X rotation (latitude/theta)
-            let y1 = py * ct - pz * st;
-            let z1 = py * st + pz * ct;
-            py = y1; pz = z1;
+            // Rotate X
+            let y1 = y * cx - z * sx;
+            let z1 = y * sx + z * cx;
+            y = y1; z = z1;
 
-            // Y rotation (longitude/phi)
-            let x2 = px * cp + pz * sp;
-            let z2 = -px * sp + pz * cp;
-            px = x2; pz = z2;
+            // Rotate Y
+            let x1 = x * cy + z * sy;
+            let z1b = -x * sy + z * cy;
+            x = x1; z = z1b;
 
-            return [px, py, pz];
+            // Rotate Z
+            let x2 = x * cz - y * sz;
+            let y2 = x * sz + y * cz;
+            x = x2; y = y2;
+
+            return [x + pos.x, y + pos.y, z + pos.z];
         });
 
         transformedVerts.forEach(v => this.vertices.push(v));
         const vo = this.vertexOffset;
-        this.faces.push([vo, vo+1, vo+2, vo+3]); // Outer
+        this.faces.push([vo, vo+1, vo+2, vo+3]); // Inner
         this.faces.push([vo+4, vo+5, vo+1, vo]); // Front 
         this.faces.push([vo+5, vo+6, vo+2, vo+1]); // Right
         this.faces.push([vo+6, vo+7, vo+3, vo+2]); // Back
         this.faces.push([vo+7, vo+4, vo, vo+3]); // Left
-        this.faces.push([vo+7, vo+6, vo+5, vo+4]); // Inner
+        this.faces.push([vo+7, vo+6, vo+5, vo+4]); // Outer
         this.vertexOffset += 8;
     }
 
+    // Helper for dome bricks
+    addDomeBlock(w, h, d, radius, phi, theta) {
+        const cp = Math.cos(phi), sp = Math.sin(phi);
+        const ct = Math.cos(theta), st = Math.sin(theta);
+        
+        // Position on sphere
+        const px = radius * ct * sp;
+        const py = radius * st;
+        const pz = radius * ct * cp;
+
+        // Rotation to face center
+        // phi is rotation around Y, -theta is tilt around X (in local space after phi)
+        this.addBlock(w, h, d, { x: px, y: py, z: pz }, { x: -theta, y: phi, z: 0 });
+    }
+
     getObjString() {
-        let str = "# TikTok 1:1 Igloo\no Igloo\n";
+        let str = "# TikTok 1:1 Igloo Definitive\no Igloo\n";
         this.vertices.forEach(v => str += `v ${v[0].toFixed(4)} ${v[1].toFixed(4)} ${v[2].toFixed(4)}\n`);
         this.faces.forEach(f => str += `f ${f[0]} ${f[1]} ${f[2]} ${f[3]}\n`);
         return str;
     }
 }
 
-function buildIglooObj() {
+function buildDefinitiveIgloo() {
     const writer = new ObjWriter();
     
-    const radius = 3.65;
-    const blockH = 0.55; 
-    const rows = 10;
-    const blockD = 0.35; // Thin bricks hug the surface
+    // 1. DOME
+    const domeRadius = 3.6;
+    const blockH = 0.55;
+    const blockD = 0.35;
+    const rows = 11;
 
     for (let r = 0; r < rows; r++) {
-        // theta 0 is North Pole (top), PI/2 is Equator (ground)
-        // We want ground to the top. So theta goes from PI/2 down to 0.
-        const latitude = Math.PI / 2 - (r / rows) * (Math.PI / 2);
-        const theta = (latitude); // Angle from equator up
+        const theta = (r / rows) * (Math.PI / 2);
+        if (theta > (Math.PI/2) * 0.9) continue; // Leave hole for chimney
 
-        const rCurrent = radius * Math.cos(theta);
-        const yCenter = radius * Math.sin(theta);
-        
-        const circ = 2 * Math.PI * rCurrent;
-        if (circ < 1.0) continue; // Skip very top point
-
-        const numBlocks = Math.max(1, Math.floor(circ / 1.7));
+        const radiusAtTheta = domeRadius * Math.cos(theta);
+        const circ = 2 * Math.PI * radiusAtTheta;
+        const numBlocks = Math.max(1, Math.floor(circ / 1.5));
         const angleStep = (Math.PI * 2) / numBlocks;
         const stagger = (r % 2 === 0) ? 0 : angleStep / 2;
 
         for (let i = 0; i < numBlocks; i++) {
             const phi = i * angleStep + stagger;
             
-            // Door cutout (only for rows close to ground)
-            if (r < 4 && phi > Math.PI*0.38 && phi < Math.PI*0.62) continue;
+            // Door cutout (front is roughly phi=0 or PI)
+            // Let's use phi=0 as front
+            if (theta < 0.6 && (phi < 0.4 || phi > Math.PI*2 - 0.4)) continue;
 
-            // Using the new architectural aligner
-            // bw should be slightly less than arc length
-            const bw = (circ / numBlocks) * 0.95;
-            writer.addArchitecturalBlock(
-                bw, blockH * 0.95, blockD,
-                radius, phi, -theta
+            const bw = (circ / numBlocks) * 0.96;
+            writer.addDomeBlock(bw, blockH * 0.96, blockD, domeRadius, phi, theta);
+        }
+    }
+
+    // 2. TUNNEL (The curved entrance)
+    const tWidth = 1.3;
+    const tHeight = 1.6;
+    const tLength = 3.5;
+    const tArches = 6;
+    
+    for (let i = 0; i < tArches; i++) {
+        const zDist = domeRadius - 0.5 + (i * 0.6);
+        const numArchBlocks = 7;
+        for (let j = 0; j < numArchBlocks; j++) {
+            const archAngle = (j / (numArchBlocks - 1)) * Math.PI;
+            const x = Math.cos(archAngle) * tWidth;
+            const y = Math.sin(archAngle) * tHeight;
+            
+            // Stagger tunnel arches
+            const staggerY = (i % 2 === 0) ? 0 : 0.1;
+
+            writer.addBlock(1.0, 0.6, 0.5, 
+                { x: x, y: y + staggerY, z: zDist }, 
+                { x: 0, y: 0, z: archAngle - Math.PI/2 }
             );
         }
     }
 
-    // Simplified Tunnel (Lower and wider)
-    const tCount = 4;
-    for (let i = 0; i < tCount; i++) {
-        const zPos = radius + 0.3 + (i * 0.6);
-        const tWidth = 1.4;
-        const tHeight = 1.4;
-        for (let j = 0; j < 5; j++) {
-            const angle = (j / 4) * Math.PI;
-            const tx = Math.cos(angle) * tWidth;
-            const ty = Math.sin(angle) * tHeight;
-            // Tunnel bricks are just oriented boxes
-            writer.addArchitecturalBlock(1.1, 0.6, 0.5, zPos, 0, Math.PI/2); // Placeholder logic for tunnel
-            // Wait, let's just make the tunnel manually
-        }
-    }
-    // Actually, let's skip the tunnel in this pass or simplify it greatly to avoid bugs
-    // I will write a better tunnel logic.
-
-    return writer.getObjString();
-}
-
-// Re-writing with better tunnel
-function buildFinalIgloo() {
-    const writer = new ObjWriter();
-    const radius = 3.6;
-    const blockH = 0.6;
-    const rows = 10;
-    const blockD = 0.3;
-
-    for (let r = 0; r < rows; r++) {
-        const theta = (r / rows) * (Math.PI / 2); // 0 at ground, PI/2 at top
-        if (theta > (Math.PI/2) * 0.95) continue;
-
-        const circ = 2 * Math.PI * radius * Math.cos(theta);
-        const numBlocks = Math.max(1, Math.floor(circ / 1.6));
-        const angleStep = (Math.PI * 2) / numBlocks;
-        const stagger = (r % 2 === 0) ? 0 : angleStep / 2;
-
-        for (let i = 0; i < numBlocks; i++) {
-            const phi = i * angleStep + stagger;
-            if (theta < 0.6 && phi > Math.PI*0.38 && phi < Math.PI*0.62) continue;
-            
-            const bw = (circ / numBlocks) * 0.96;
-            writer.addArchitecturalBlock(bw, blockH * 0.96, blockD, radius, phi, -theta);
-        }
-    }
-
-    // Tunnel
-    for(let i=0; i<4; i++){
-        const dist = radius + 0.5 + (i * 0.55);
-        for(let j=0; j<5; j++){
-            const tAngle = (j/4) * Math.PI;
-            const tx = Math.cos(tAngle) * 1.5;
-            const ty = Math.sin(tAngle) * 1.5;
-            // Manual alignment for tunnel
-            // Width: 1.1, Height: 0.5, Depth: 0.5
-            // But we can approximate with a box rotated around Y (i.e. Z in world)
-            // For now, let's just use the same block generator with theta=0 but shifted
-            writer.addArchitecturalBlock(1.1, 0.6, 0.5, dist, 0, 0); // Not ideal, but better than spikes
+    // 3. CHIMNEY (Resting on top)
+    const chimneyRadius = 0.8;
+    for (let r = 0; r < 2; r++) {
+        const cY = domeRadius - 0.2 + (r * 0.5);
+        const numCBlocks = 6;
+        for (let i = 0; i < numCBlocks; i++) {
+            const phi = (i / numCBlocks) * Math.PI * 2 + (r * 0.3);
+            const cx = Math.cos(phi) * chimneyRadius;
+            const cz = Math.sin(phi) * chimneyRadius;
+            writer.addBlock(0.8, 0.5, 0.4, 
+                { x: cx, y: cY, z: cz }, 
+                { x: 0, y: -phi + Math.PI/2, z: 0 }
+            );
         }
     }
 
     return writer.getObjString();
 }
 
-fs.writeFileSync('igloo.obj', buildFinalIgloo());
+fs.writeFileSync('igloo.obj', buildDefinitiveIgloo());
 console.log('igloo.obj created successfully.');

@@ -124,12 +124,37 @@ function loadBlockyIgloo() {
     });
 
     // Intense internal pulsing fire
-    const campfire = new THREE.PointLight(0xffaa22, 15.0, 25);
-    campfire.position.set(0, 1.5, 2.0);
+    const campfire = new THREE.PointLight(0xffaa22, 20.0, 30);
+    campfire.position.set(0, 1.5, 1.0);
     iglooGroup.add(campfire);
     iglooGroup.userData.campfire = campfire;
 
+    // Volumetric glow at the end of the tunnel
+    const glowTex = createGlowTexture();
+    const glowMat = new THREE.SpriteMaterial({ 
+        map: glowTex, transparent: true, opacity: 0.8, 
+        blending: THREE.AdditiveBlending, depthWrite: false 
+    });
+    const spill = new THREE.Sprite(glowMat);
+    spill.position.set(0, 1.3, 6.5);
+    spill.scale.set(10, 8, 1);
+    iglooGroup.add(spill);
+    iglooGroup.userData.spill = spill;
+
     introScene.add(iglooGroup);
+}
+
+function createGlowTexture() {
+    const c = document.createElement("canvas");
+    c.width = c.height = 256;
+    const ctx = c.getContext("2d");
+    const g = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+    g.addColorStop(0, "rgba(255, 120, 0, 1)");
+    g.addColorStop(0.3, "rgba(255, 60, 0, 0.4)");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 256, 256);
+    return new THREE.CanvasTexture(c);
 }
 
 function createPremiumSnow() {
