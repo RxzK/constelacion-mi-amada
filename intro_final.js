@@ -147,19 +147,15 @@
         iglooGroup = new THREE.Group();
         iglooGroup.position.set(0, -2, 0);
 
-        // 1:1 Reference Ice Material
-        const iceBlockMat = new THREE.MeshPhysicalMaterial({
+        // Simplified Material for Debugging
+        const iceBlockMat = new THREE.MeshStandardMaterial({
             color: 0xccf0ff,
             emissive: 0x004488,
-            emissiveIntensity: 0.35,
-            metalness: 0.05,
-            roughness: 0.15,
-            transmission: 0.8,
-            ior: 1.31, // Real ice index
+            emissiveIntensity: 0.4,
+            metalness: 0.1,
+            roughness: 0.2,
             transparent: true,
-            opacity: 0.98,
-            clearcoat: 1.0,
-            reflectivity: 0.5,
+            opacity: 0.9,
         });
 
         const loader = new THREE.OBJLoader();
