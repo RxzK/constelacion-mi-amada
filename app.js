@@ -1,7 +1,7 @@
-/* ===== MAIN 3D UNIVERSE ENGINE =====
-   Uses Three.js r128 (loaded via CDN)
-   Memories data loaded from memories.js
-====================================== */
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
 (function () {
     "use strict";
@@ -49,22 +49,6 @@
     if (window.initIntroScene) {
         window.initIntroScene();
     }
-
-    // Spline-based transition
-    window.triggerIntroTransition = function(callback) {
-        const whiteout = document.getElementById("intro-whiteout");
-        const spline = document.querySelector("spline-viewer");
-        
-        // Final transition feel: Shine then whiteout
-        gsap.to(whiteout, {
-            opacity: 1, 
-            duration: 1.5, 
-            ease: "power2.inOut",
-            onComplete: callback
-        });
-        
-        // Optional: Move spline camera away if we had access to its API
-    };
 
     enterBtn.addEventListener("click", () => {
         const overlay = document.getElementById("intro-overlay");
@@ -209,16 +193,15 @@
         pivot.add(lines);
         window._pivot = pivot;
 
-        /* ---- POST-PROCESSING (BLOOM) ---- */
-        const renderScene = new THREE.RenderPass(scene, camera);
-        bloomPass = new THREE.UnrealBloomPass(
+        const renderScene = new RenderPass(scene, camera);
+        bloomPass = new UnrealBloomPass(
             new THREE.Vector2(window.innerWidth, window.innerHeight),
             1.5, // Strength
             0.4, // Radius
             0.85 // Threshold
         );
         
-        composer = new THREE.EffectComposer(renderer);
+        composer = new EffectComposer(renderer);
         composer.addPass(renderScene);
         composer.addPass(bloomPass);
 
