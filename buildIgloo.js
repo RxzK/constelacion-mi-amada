@@ -85,71 +85,78 @@ class ObjWriter {
 function buildIglooObj() {
     const writer = new ObjWriter();
     
-    const radius = 3.5;
-    const blockH = 0.5;
-    const rows = 8;
-    const blockD = 0.6; // thickness
+    const radius = 3.6;
+    const blockH = 0.55;
+    const rows = 9;
+    const blockD = 0.7; // thickness for volume
 
     // Tiers of the dome
     for (let r = 0; r < rows; r++) {
         const theta1 = (r / rows) * (Math.PI / 2);
-        const theta2 = ((r + 1) / rows) * (Math.PI / 2);
         
         const rCurrent = radius * Math.cos(theta1);
         const yCurrent = radius * Math.sin(theta1);
         
         const circ = 2 * Math.PI * rCurrent;
-        // Target block width is ~0.8
-        const numBlocks = Math.max(1, Math.floor(circ / 0.8));
+        // Target block width is ~0.85
+        const numBlocks = Math.max(1, Math.floor(circ / 0.85));
         const angleStep = (Math.PI * 2) / numBlocks;
 
         for (let i = 0; i < numBlocks; i++) {
-            // Leave a gap for the door on the bottom 3 rows (angles around -PI/2)
             const angle = i * angleStep;
             
-            // Check for door (say from angle 1.2 * PI to 1.8 * PI approx)
+            // Door cutout
             if (r < 3) {
-                // If it's pointing roughly forward (Z axis, which is PI/2 in this mapping if X is cos, Z is sin)
-                if (angle > Math.PI*0.35 && angle < Math.PI*0.65) {
-                    continue; // Skip blocks for door entrance
+                if (angle > Math.PI*0.38 && angle < Math.PI*0.62) {
+                    continue; 
                 }
             }
 
             const x = Math.cos(angle) * rCurrent;
             const z = Math.sin(angle) * rCurrent;
             
-            // Tilt the block inward slightly based on the row (theta1)
+            // Tilt for dome curvature
             const rotX = -theta1 * Math.sin(angle);
             const rotZ = theta1 * Math.cos(angle);
             
-            // Randomize position and size slightly for "hand-built" look
-            const bw = (circ / numBlocks) * 0.95; // 5% gap
+            // Irregularity factor (Jitter)
+            const jitterX = (Math.random() - 0.5) * 0.15;
+            const jitterZ = (Math.random() - 0.5) * 0.15;
+            const jitterRot = (Math.random() - 0.5) * 0.1;
+            const sizeMod = 0.9 + Math.random() * 0.2;
+
+            const bw = (circ / numBlocks) * 0.92; // Slight gaps
             writer.addBox(
-                bw, blockH * 0.95, blockD,
-                x + (Math.random()-0.5)*0.05, 
-                yCurrent + blockH/2 + (Math.random()-0.5)*0.02, 
-                z + (Math.random()-0.5)*0.05,
-                -angle, // rotY
-                rotX, 
-                rotZ
+                bw * sizeMod, 
+                blockH * 0.92 * sizeMod, 
+                blockD * sizeMod,
+                x + jitterX, 
+                yCurrent + blockH/2 + (Math.random()-0.5)*0.05, 
+                z + jitterZ,
+                -angle + jitterRot, 
+                rotX + (Math.random()-0.5)*0.05, 
+                rotZ + (Math.random()-0.5)*0.05
             );
         }
     }
 
-    // Tunnel
-    const tLength = 3;
-    const tWidth = 1.0;
-    for (let i = 0; i < 4; i++) { // 4 rings of tunnel
-        const tz = radius + 0.3 + (i * 0.6);
-        for (let j = 0; j < 6; j++) { // 6 blocks per arch
-            const tAngle = (j / 5) * Math.PI; // 0 to PI
+    // High-fidelity Tunnel
+    const tLength = 5;
+    const tWidth = 1.3;
+    const tHeight = 1.4;
+    for (let i = 0; i < 6; i++) { 
+        const tz = radius + 0.2 + (i * 0.55);
+        for (let j = 0; j < 7; j++) { 
+            const tAngle = (j / 6) * Math.PI;
             const tx = Math.cos(tAngle) * tWidth;
-            const ty = Math.sin(tAngle) * tWidth;
+            const ty = Math.sin(tAngle) * tHeight;
             
             writer.addBox(
-                0.6, 0.4, 0.5,
-                tx, ty + 0.2, tz,
-                0, 0, tAngle
+                0.65, 0.45, 0.55,
+                tx + (Math.random()-0.5)*0.1, 
+                ty + 0.2 + (Math.random()-0.5)*0.1, 
+                tz,
+                0, (Math.random()-0.5)*0.1, tAngle + (Math.random()-0.5)*0.1
             );
         }
     }

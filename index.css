@@ -81,11 +81,11 @@ body {
   max-width: 380px;
   width: 100%;
   animation: fadeUp 1.4s ease forwards;
-  background: rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.05); /* Ultra-transparent */
+  backdrop-filter: blur(4px);
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.03); /* Almost invisible border */
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
 }
 
 @media (max-width: 768px) {
