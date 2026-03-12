@@ -25,8 +25,8 @@ window.initIntroScene = function () {
 
     /* ---- SCENE ---- */
     introScene = new THREE.Scene();
-    introScene.background = new THREE.Color(0xddeeff); // Bright icy sky
-    introScene.fog = new THREE.FogExp2(0xddeeff, 0.04); // Thick white fog
+    introScene.background = new THREE.Color(0x010a15); // Dark deep blue to avoid background bloom
+    introScene.fog = new THREE.FogExp2(0x010a15, 0.015); // Match background, subtle density
 
     /* ---- CAMERA ---- */
     introCamera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 500);
@@ -54,9 +54,9 @@ window.initIntroScene = function () {
     const renderScene = new RenderPass(introScene, introCamera);
     introBloom = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
-        3.5, // MASSIVE Strength
-        1.5, // Large Radius
-        0.1  // VERY LOW Threshold (everything bleeds)
+        2.0, // Strength
+        0.8, // Radius
+        0.5  // Threshold (only emissive things bleed)
     );
     introComposer = new EffectComposer(introRenderer);
     introComposer.addPass(renderScene);
@@ -103,13 +103,13 @@ function createBeveledIgloo() {
 
     // Aggressive Stylized Glow Material
     const iceBlockMat = new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        emissive: 0xaaddff, // Very strong icy blue glow
+        color: 0xeefbff,
+        emissive: 0x2288ff, // Strong icy blue glow
         emissiveIntensity: 0.8,
-        roughness: 1.0, 
+        roughness: 0.5, 
         metalness: 0.0,
         transparent: true,
-        opacity: 0.95 // Almost solid, relies on glow
+        opacity: 0.95 
     });
 
     const bevelRadius = 0.08; 
