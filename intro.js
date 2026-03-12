@@ -154,7 +154,6 @@
             metalness: 0.05,
             roughness: 0.15,
             transmission: 0.8,
-            thickness: 1.5, // Thick blocks
             ior: 1.31, // Real ice index
             transparent: true,
             opacity: 0.98,
