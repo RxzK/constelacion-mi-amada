@@ -147,34 +147,18 @@
         iglooGroup = new THREE.Group();
         iglooGroup.position.set(0, -2, 0);
 
-        // 1:1 Reference Ice Material (Frosted & Structured)
-        const iceBlockMat = new THREE.MeshPhysicalMaterial({
-            color: 0xddeeff,
-            emissive: 0x2288ff,
-            emissiveIntensity: 0.15,
-            metalness: 0.1,
-            roughness: 0.25, // More frosted than glass
-            transmission: 0.65, 
-            ior: 1.34, 
-            transparent: true,
-            opacity: 1.0,
-            reflectivity: 0.3,
-            clearcoat: 0.8,
-            clearcoatRoughness: 0.1
+        // 1:1 Solid Frosted Ice Material
+        const iceBlockMat = new THREE.MeshStandardMaterial({
+            color: 0xeefaff,
+            emissive: 0x4488ff,
+            emissiveIntensity: 0.1,
+            roughness: 0.8, // Frosted look
+            metalness: 0.0,
+            transparent: false,
+            opacity: 1.0
         });
 
-        // Mortar / Inner Fill (This makes the white/cyan lines between blocks)
-        const mortarMat = new THREE.MeshBasicMaterial({
-            color: 0xaaddff,
-            transparent: true,
-            opacity: 0.8,
-            side: THREE.BackSide
-        });
-        const mortarDom = new THREE.Mesh(
-            new THREE.SphereGeometry(3.72, 32, 24, 0, Math.PI * 2, 0, Math.PI / 2),
-            mortarMat
-        );
-        iglooGroup.add(mortarDom);
+        const edgeMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 });
 
         const loader = new THREE.OBJLoader();
         loader.load('igloo.obj', function (object) {
@@ -184,10 +168,28 @@
                     child.castShadow = true;
                     child.receiveShadow = true;
                     child.geometry.computeVertexNormals();
+
+                    // Create structured outlines
+                    const edges = new THREE.EdgesGeometry(child.geometry, 15);
+                    const line = new THREE.LineSegments(edges, edgeMat);
+                    child.add(line);
                 }
             });
             iglooGroup.add(object);
         });
+
+        // Glowing Core / Mortar Gaps
+        const mortarMat = new THREE.MeshBasicMaterial({
+            color: 0x88ccff,
+            transparent: true,
+            opacity: 0.4,
+            side: THREE.BackSide
+        });
+        const mortarDom = new THREE.Mesh(
+            new THREE.SphereGeometry(3.6, 32, 24, 0, Math.PI * 2, 0, Math.PI / 2),
+            mortarMat
+        );
+        iglooGroup.add(mortarDom);
 
         // Warm internal pulsing fire
         const campfire = new THREE.PointLight(0xff5500, 5.0, 18);

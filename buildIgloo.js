@@ -85,10 +85,10 @@ class ObjWriter {
 function buildIglooObj() {
     const writer = new ObjWriter();
     
-    const radius = 3.8;
-    const blockH = 0.65;
+    const radius = 3.75;
+    const blockH = 0.66;
     const rows = 7;
-    const blockD = 0.5; // thickness 
+    const blockD = 0.65; // Thicker for solid feel
 
     // Tiers of the dome
     for (let r = 0; r < rows; r++) {
@@ -98,8 +98,8 @@ function buildIglooObj() {
         const yCurrent = radius * Math.sin(theta1);
         
         const circ = 2 * Math.PI * rCurrent;
-        // Even larger blocks ~1.45 for a cleaner dome
-        const numBlocks = Math.max(1, Math.floor(circ / 1.45));
+        // Large, clean blocks
+        const numBlocks = Math.max(1, Math.floor(circ / 1.55));
         const angleStep = (Math.PI * 2) / numBlocks;
 
         for (let i = 0; i < numBlocks; i++) {
@@ -119,8 +119,8 @@ function buildIglooObj() {
             const rotX = -theta1 * Math.sin(angle);
             const rotZ = theta1 * Math.cos(angle);
             
-            // No jitter for a perfect architect's model
-            const bw = (circ / numBlocks) * 0.98; // Tighter gaps
+            // NO RANDOMNESS - Perfectly clean architectural blocks
+            const bw = (circ / numBlocks) * 0.98; 
             writer.addBox(
                 bw, 
                 blockH * 0.98, 
