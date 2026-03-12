@@ -145,7 +145,19 @@
     /* ==== HIGH-FIDELITY IGLOO ==== */
     function loadBlockyIgloo() {
         iglooGroup = new THREE.Group();
-        iglooGroup.position.set(0, -0.2, 0);
+        iglooGroup.position.set(0, -0.1, 0);
+
+        // Snow Mound for Grounding
+        const snowMoundGeo = new THREE.CircleGeometry(5.0, 32);
+        const snowMoundMat = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            roughness: 1.0,
+            metalness: 0.0
+        });
+        const snowMound = new THREE.Mesh(snowMoundGeo, snowMoundMat);
+        snowMound.rotation.x = -Math.PI / 2;
+        snowMound.position.y = 0.05;
+        iglooGroup.add(snowMound);
 
         // 1:1 Solid Frosted Ice Material (Matt Finish)
         const iceBlockMat = new THREE.MeshStandardMaterial({
