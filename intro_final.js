@@ -64,7 +64,7 @@
 
         /* ---- POST-PROCESSING (BLOOM) ---- */
         const renderScene = new THREE.RenderPass(introScene, introCamera);
-        introBloom = new UnrealBloomPass(
+        introBloom = new THREE.UnrealBloomPass(
             new THREE.Vector2(window.innerWidth, window.innerHeight),
             1.6, 0.5, 0.85
         );
@@ -147,15 +147,19 @@
         iglooGroup = new THREE.Group();
         iglooGroup.position.set(0, -2, 0);
 
-        // Simplified Material for Debugging
-        const iceBlockMat = new THREE.MeshStandardMaterial({
+        // Premium Ice Material
+        const iceBlockMat = new THREE.MeshPhysicalMaterial({
             color: 0xccf0ff,
             emissive: 0x004488,
-            emissiveIntensity: 0.4,
+            emissiveIntensity: 0.35,
             metalness: 0.1,
-            roughness: 0.2,
+            roughness: 0.15,
+            transmission: 0.75, // r128 compatible
+            ior: 1.31,
             transparent: true,
-            opacity: 0.9,
+            opacity: 1.0,
+            reflectivity: 0.5,
+            clearcoat: 1.0,
         });
 
         const loader = new THREE.OBJLoader();
