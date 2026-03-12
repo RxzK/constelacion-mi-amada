@@ -3,6 +3,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import SplineLoader from '@splinetool/loader';
 
 let introRenderer, introScene, introCamera, introComposer, introBloom;
 let snowParticles, iglooGroup;
@@ -48,7 +49,7 @@ window.initIntroScene = function () {
     /* ---- BUILDER FUNCTIONS ---- */
     createCinematicTerrain();
     createPremiumSnow();
-    createBeveledIgloo();
+    loadSplineIgloo();
 
     /* ---- POST-PROCESSING ---- */
     const renderScene = new RenderPass(introScene, introCamera);
@@ -97,7 +98,7 @@ function createCinematicTerrain() {
     introScene.add(terrain);
 }
 
-function createBeveledIgloo() {
+function loadSplineIgloo() {
     iglooGroup = new THREE.Group();
     iglooGroup.position.set(0, -0.1, 0);
 
@@ -112,134 +113,48 @@ function createBeveledIgloo() {
         opacity: 0.95 
     });
 
-    const bevelRadius = 0.08; 
-    const blockD = 0.50; // VERY Thicker blocks to overlap
-    const blockH = 0.65; // Taller blocks to overlap
-    const domeRadius = 3.6;
+    const loader = new SplineLoader();
+    loader.load(
+        'https://prod.spline.design/hU4p2jV-bLAL3EwZ/scene.splinecode',
+        (splineScene) => {
+            // Center the spline scene if necessary, scale it down slightly to match our camera
+            splineScene.scale.set(1.5, 1.5, 1.5);
+            splineScene.position.set(0, 0, 0);
 
-    // Shared geometry
-    const geo = new RoundedBoxGeometry(1, 1, 1, 3, bevelRadius);
+            splineScene.traverse((child) => {
+                if (child.isMesh) {
+                    // Override all spline materials with our massive glowing snow material
+                    child.material = iceBlockMat;
+                }
+            });
 
-    const addBlock = (w, h, d, pos, rot) => {
-        const mesh = new THREE.Mesh(geo, iceBlockMat);
-        mesh.scale.set(w, h, d);
-        
-        // Organic Jitter ("Hand-built" look)
-        const jRotX = (Math.random() - 0.5) * 0.1;
-        const jRotY = (Math.random() - 0.5) * 0.1;
-        const jRotZ = (Math.random() - 0.5) * 0.1;
-        const jPosX = (Math.random() - 0.5) * 0.06;
-        const jPosY = (Math.random() - 0.5) * 0.04;
-        const jPosZ = (Math.random() - 0.5) * 0.06;
-        
-        mesh.position.set(pos.x + jPosX, pos.y + jPosY, pos.z + jPosZ);
-        mesh.rotation.set(rot.x + jRotX, rot.y + jRotY, rot.z + jRotZ);
-        iglooGroup.add(mesh);
-    };
+            iglooGroup.add(splineScene);
+            
+            // Re-add the intense internal pulsing fire
+            const campfire = new THREE.PointLight(0xffaa22, 25.0, 30);
+            campfire.position.set(0, 1.5, 1.0);
+            iglooGroup.add(campfire);
+            iglooGroup.userData.campfire = campfire;
 
-    const addDomeBlock = (w, h, d, radius, phi, theta) => {
-        const cp = Math.cos(phi), sp = Math.sin(phi);
-        const ct = Math.cos(theta), st = Math.sin(theta);
-        const px = radius * ct * sp;
-        const py = radius * st;
-        const pz = radius * ct * cp;
-        addBlock(w, h, d, { x: px, y: py, z: pz }, { x: -theta, y: phi, z: 0 });
-    };
-
-    // 1. DOME
-    const rows = 11;
-    for (let r = 0; r < rows; r++) {
-        const theta = (r / rows) * (Math.PI / 2);
-        if (theta > (Math.PI/2) * 0.9) continue; 
-        const radiusAtTheta = domeRadius * Math.cos(theta);
-        const circ = 2 * Math.PI * radiusAtTheta;
-        // Use max blocks, no gaps. We want them to overlap.
-        const numBlocks = Math.max(1, Math.floor(circ / 1.4)); 
-        const angleStep = (Math.PI * 2) / numBlocks;
-        const stagger = (r % 2 === 0) ? 0 : angleStep / 2;
-        for (let i = 0; i < numBlocks; i++) {
-            const phi = i * angleStep + stagger;
-            if (theta < 0.6 && (phi < 0.4 || phi > Math.PI*2 - 0.4)) continue;
-            // Blocks are WIDER than the step to overlap
-            const bw = (circ / numBlocks) * 1.1; 
-            addDomeBlock(bw, blockH, blockD, domeRadius, phi, theta);
+            // Volumetric glow
+            const glowTex = createGlowTexture();
+            const glowMat = new THREE.SpriteMaterial({ 
+                map: glowTex, transparent: true, opacity: 0.8, 
+                blending: THREE.AdditiveBlending, depthWrite: false 
+            });
+            const spill = new THREE.Sprite(glowMat);
+            spill.position.set(0, 1.3, 6.5);
+            spill.scale.set(10, 8, 1);
+            iglooGroup.add(spill);
+            iglooGroup.userData.spill = spill;
+        },
+        undefined,
+        (error) => {
+            console.error('An error happened loading the Spline scene', error);
         }
-    }
-
-    // 2. TUNNEL
-    const tWidth = 1.3, tHeight = 1.6, tArches = 6;
-    for (let i = 0; i < tArches; i++) {
-        const zDist = domeRadius - 0.5 + (i * 0.6);
-        const numArchBlocks = 7;
-        for (let j = 0; j < numArchBlocks; j++) {
-            const archAngle = (j / (numArchBlocks - 1)) * Math.PI;
-            const x = Math.cos(archAngle) * tWidth;
-            const y = Math.sin(archAngle) * tHeight;
-            const staggerY = (i % 2 === 0) ? 0 : 0.05;
-            // Overlapping blocks (1.2 instead of 1.0)
-            addBlock(1.2, 0.7, 0.7, { x: x, y: y + staggerY, z: zDist }, { x: 0, y: 0, z: archAngle - Math.PI/2 });
-        }
-    }
-
-    // 3. CHIMNEY
-    const chimneyRadius = 0.8;
-    for (let r = 0; r < 2; r++) {
-        const cY = domeRadius - 0.2 + (r * 0.5);
-        const numCBlocks = 6;
-        for (let i = 0; i < numCBlocks; i++) {
-            const phi = (i / numCBlocks) * Math.PI * 2 + (r * 0.3);
-            const cx = Math.cos(phi) * chimneyRadius;
-            const cz = Math.sin(phi) * chimneyRadius;
-            // Overlapping blocks
-            addBlock(1.1, 0.6, 0.6, { x: cx, y: cY, z: cz }, { x: 0, y: -phi + Math.PI/2, z: 0 });
-        }
-    }
-
-    // Intense internal pulsing fire
-    const campfire = new THREE.PointLight(0xffaa22, 25.0, 30);
-    campfire.position.set(0, 1.5, 1.0);
-    iglooGroup.add(campfire);
-    iglooGroup.userData.campfire = campfire;
-
-    // Volumetric glow
-    const glowTex = createGlowTexture();
-    const glowMat = new THREE.SpriteMaterial({ 
-        map: glowTex, transparent: true, opacity: 0.8, 
-        blending: THREE.AdditiveBlending, depthWrite: false 
-    });
-    const spill = new THREE.Sprite(glowMat);
-    spill.position.set(0, 1.3, 6.5);
-    spill.scale.set(10, 8, 1);
-    iglooGroup.add(spill);
-    iglooGroup.userData.spill = spill;
+    );
 
     introScene.add(iglooGroup);
-}
-
-function createIceNoiseTexture() {
-    const size = 512;
-    const canvas = document.createElement("canvas");
-    canvas.width = size; canvas.height = size;
-    const ctx = canvas.getContext("2d");
-    const imgData = ctx.createImageData(size, size);
-    
-    // Simple white noise for bump
-    for (let i = 0; i < imgData.data.length; i += 4) {
-        const val = Math.random() * 255;
-        // Smooth it slightly by blending with neighbors would be ideal, 
-        // but raw noise creates a nice "frost" grain when used as a normal map
-        imgData.data[i] = val;
-        imgData.data[i+1] = val;
-        imgData.data[i+2] = 255; // Normal map Z is full
-        imgData.data[i+3] = 255;
-    }
-    ctx.putImageData(imgData, 0, 0);
-    
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(4, 2);
-    return tex;
 }
 
 function createGlowTexture() {
