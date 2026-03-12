@@ -25,6 +25,7 @@
         introRenderer.setSize(canvas.clientWidth, canvas.clientHeight);
         introRenderer.toneMapping = THREE.ACESFilmicToneMapping;
         introRenderer.toneMappingExposure = 1.2;
+        introRenderer.physicallyCorrectLights = true;
         introRenderer.shadowMap.enabled = true;
         introRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
