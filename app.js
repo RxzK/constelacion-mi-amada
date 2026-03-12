@@ -50,24 +50,36 @@
         window.initIntroScene();
     }
 
+    // Spline-based transition
+    window.triggerIntroTransition = function(callback) {
+        const whiteout = document.getElementById("intro-whiteout");
+        const spline = document.querySelector("spline-viewer");
+        
+        // Final transition feel: Shine then whiteout
+        gsap.to(whiteout, {
+            opacity: 1, 
+            duration: 1.5, 
+            ease: "power2.inOut",
+            onComplete: callback
+        });
+        
+        // Optional: Move spline camera away if we had access to its API
+    };
+
     enterBtn.addEventListener("click", () => {
-        // Fade out the floating UI
         const overlay = document.getElementById("intro-overlay");
         gsap.to(overlay, { opacity: 0, duration: 0.8 });
 
-        // Trigger the cinematic camera-rockets-upward transition
         if (window.triggerIntroTransition) {
             window.triggerIntroTransition(() => {
-                // Called after the white-out completes
                 introScreen.classList.add("hidden");
                 universeScreen.classList.remove("hidden");
                 if (!sceneInitialized) {
                     initThreeJS();
                     sceneInitialized = true;
                 }
-                // Warp effect into constellation
                 gsap.fromTo(camera.position, { z: 50 }, { z: 10, duration: 2.5, ease: "power2.out" });
-                gsap.fromTo(bloomPass, { strength: 10 }, { strength: 1.5, duration: 3 });
+                if (bloomPass) gsap.fromTo(bloomPass, { strength: 10 }, { strength: 1.5, duration: 3 });
             });
         }
     });
