@@ -23,39 +23,37 @@
         introRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
         introRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         introRenderer.setSize(canvas.clientWidth, canvas.clientHeight);
-        introRenderer.toneMapping = THREE.ReinhardToneMapping;
-        introRenderer.toneMappingExposure = 1.0;
+        introRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+        introRenderer.toneMappingExposure = 1.2;
         introRenderer.shadowMap.enabled = true;
         introRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
         /* ---- SCENE ---- */
         introScene = new THREE.Scene();
         introScene.background = new THREE.Color(0x010512);
-        introScene.fog = new THREE.FogExp2(0x010512, 0.015);
+        introScene.fog = new THREE.FogExp2(0x010512, 0.012);
 
         /* ---- CAMERA ---- */
-        introCamera = new THREE.PerspectiveCamera(50, canvas.clientWidth / canvas.clientHeight, 0.1, 500);
-        introCamera.position.set(0, 4, 20);
+        introCamera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 500);
+        introCamera.position.set(0, 4, 18);
         introCamera.lookAt(0, 2, 0);
 
         /* ---- LIGHTS ---- */
-        // Cinematic Moonlight
-        const moonLight = new THREE.DirectionalLight(0x7dabff, 1.2);
-        moonLight.position.set(15, 20, 10);
+        // 1. Primary Moonlight (Casts Shadows)
+        const moonLight = new THREE.DirectionalLight(0x7dadff, 1.5);
+        moonLight.position.set(15, 25, 10);
         moonLight.castShadow = true;
-        moonLight.shadow.mapSize.set(1024, 1024);
-        moonLight.shadow.camera.near = 0.5;
-        moonLight.shadow.camera.far = 100;
-        moonLight.shadow.bias = -0.005;
+        moonLight.shadow.mapSize.set(2048, 2048);
+        moonLight.shadow.bias = -0.001;
         introScene.add(moonLight);
 
-        // Soft Fill Light
-        const fillLight = new THREE.PointLight(0x3344aa, 0.5);
-        fillLight.position.set(-10, 5, -5);
-        introScene.add(fillLight);
+        // 2. Rim Light (Backlight to highlight silhouettes)
+        const rimLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        rimLight.position.set(-15, 10, -20);
+        introScene.add(rimLight);
 
-        // Ambient (Deep Blue Sky)
-        const ambient = new THREE.AmbientLight(0x101530, 0.6);
+        // 3. Ambient blue sky
+        const ambient = new THREE.AmbientLight(0x1a2a5a, 0.5);
         introScene.add(ambient);
 
         /* ---- BUILDER FUNCTIONS ---- */
@@ -65,9 +63,9 @@
 
         /* ---- POST-PROCESSING (BLOOM) ---- */
         const renderScene = new THREE.RenderPass(introScene, introCamera);
-        introBloom = new THREE.UnrealBloomPass(
+        introBloom = new UnrealBloomPass(
             new THREE.Vector2(window.innerWidth, window.innerHeight),
-            1.5, 0.45, 0.8
+            1.6, 0.5, 0.85
         );
         introComposer = new THREE.EffectComposer(introRenderer);
         introComposer.addPass(renderScene);
@@ -87,9 +85,9 @@
         introAnimate();
     };
 
-    /* ==== TERRAIN: CINEMATIC NOISE ==== */
+    /* ==== TERRAIN: SPARKLY SNOW ==== */
     function createCinematicTerrain() {
-        const geo = new THREE.PlaneGeometry(250, 250, 128, 128);
+        const geo = new THREE.PlaneGeometry(300, 300, 150, 150);
         geo.rotateX(-Math.PI / 2);
 
         const pos = geo.attributes.position;
@@ -97,51 +95,71 @@
             const x = pos.getX(i);
             const z = pos.getZ(i);
             let y = 0;
-            // Larger hills
-            y += Math.sin(x * 0.03) * 2.5;
-            y += Math.cos(z * 0.04) * 2.0;
-            // Small noise
-            y += Math.sin(x * 0.15 + z * 0.1) * 0.4;
-            // Flat area for the igloo
+            y += Math.sin(x * 0.035) * 3.0;
+            y += Math.cos(z * 0.045) * 2.2;
+            y += Math.sin(x * 0.2 + z * 0.15) * 0.3;
+            // Clear space for igloo
             const dist = Math.sqrt(x * x + z * z);
-            if (dist < 8) {
-                const factor = Math.min(1, Math.max(0, (dist - 4) / 4));
-                y *= factor;
+            if (dist < 9) {
+                const f = Math.min(1, Math.max(0, (dist - 4.5) / 4.5));
+                y *= f;
             }
             pos.setY(i, y);
         }
         geo.computeVertexNormals();
 
-        const mat = new THREE.MeshStandardMaterial({
-            color: 0xe0f1ff,
+        // Physically Based Snow (with sparkles)
+        const snowMat = new THREE.MeshPhysicalMaterial({
+            color: 0xeef8ff,
             roughness: 0.9,
             metalness: 0.0,
+            clearcoat: 0.5,
+            clearcoatRoughness: 0.2, // Simulated crystals/sparkles
             flatShading: false,
         });
-        const terrain = new THREE.Mesh(geo, mat);
+        
+        const terrain = new THREE.Mesh(geo, snowMat);
         terrain.position.y = -2;
         terrain.receiveShadow = true;
         introScene.add(terrain);
+
+        // Add "sparkle" dust on ground
+        for (let i = 0; i < 15; i++) {
+            const iceGeo = new THREE.CircleGeometry(3 + Math.random() * 5, 8);
+            iceGeo.rotateX(-Math.PI / 2);
+            const iceMat = new THREE.MeshPhysicalMaterial({
+                color: 0xddeeff,
+                roughness: 0.01,
+                metalness: 0.4,
+                transparent: true,
+                opacity: 0.15,
+                reflectivity: 1.0,
+            });
+            const patch = new THREE.Mesh(iceGeo, iceMat);
+            patch.position.set((Math.random()-0.5)*80, -1.9, (Math.random()-0.5)*80);
+            introScene.add(patch);
+        }
     }
 
-    /* ==== LOAD BLOCKY IGLOO (TRUE 3D) ==== */
+    /* ==== HIGH-FIDELITY IGLOO ==== */
     function loadBlockyIgloo() {
         iglooGroup = new THREE.Group();
         iglooGroup.position.set(0, -2, 0);
 
-        // Premium Frosted Ice Material (Physical)
+        // 1:1 Reference Ice Material
         const iceBlockMat = new THREE.MeshPhysicalMaterial({
-            color: 0xd0e8ff,
-            emissive: 0x002233,
-            emissiveIntensity: 0.5,
-            metalness: 0.1,
-            roughness: 0.25,
-            transmission: 0.6,
-            thickness: 0.5,
+            color: 0xccf0ff,
+            emissive: 0x004488,
+            emissiveIntensity: 0.35,
+            metalness: 0.05,
+            roughness: 0.15,
+            transmission: 0.8,
+            thickness: 1.5, // Thick blocks
+            ior: 1.31, // Real ice index
             transparent: true,
-            opacity: 0.95,
+            opacity: 0.98,
             clearcoat: 1.0,
-            clearcoatRoughness: 0.1,
+            reflectivity: 0.5,
         });
 
         const loader = new THREE.OBJLoader();
@@ -157,63 +175,58 @@
             iglooGroup.add(object);
         });
 
-        // 1. Warm campfire light (Very bright focal point)
-        const campfire = new THREE.PointLight(0xff7700, 4.0, 15);
-        campfire.position.set(0, 1.2, 3);
+        // Warm internal pulsing fire
+        const campfire = new THREE.PointLight(0xff5500, 5.0, 18);
+        campfire.position.set(0, 1.5, 2.5);
         campfire.castShadow = true;
-        campfire.shadow.bias = -0.01;
+        campfire.shadow.bias = -0.005;
         iglooGroup.add(campfire);
         iglooGroup.userData.campfire = campfire;
 
-        // 2. Volumetric-style glow Sprite at entrance
-        const glowTex = createGlowTexture(0xff5500);
-        const glowMat = new THREE.SpriteMaterial({ map: glowTex, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending });
-        const entryGlow = new THREE.Sprite(glowMat);
-        entryGlow.position.set(0, 1.2, 4.5);
-        entryGlow.scale.set(6, 6, 1);
-        iglooGroup.add(entryGlow);
-        iglooGroup.userData.entryGlow = entryGlow;
-
-        // 3. Snow cap (Fluffy top layer)
-        const capGeo = new THREE.SphereGeometry(3.7, 32, 12, 0, Math.PI * 2, 0, Math.PI / 5);
-        const capMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1.0 });
-        const cap = new THREE.Mesh(capGeo, capMat);
-        cap.castShadow = true;
-        iglooGroup.add(cap);
+        // Volumetric spill glow (Doorway)
+        const glowTex = createGlowTexture();
+        const glowMat = new THREE.SpriteMaterial({ 
+            map: glowTex, transparent: true, opacity: 0.7, 
+            blending: THREE.AdditiveBlending, depthWrite: false 
+        });
+        const spill = new THREE.Sprite(glowMat);
+        spill.position.set(0, 1.2, 4.5);
+        spill.scale.set(8, 7, 1);
+        iglooGroup.add(spill);
+        iglooGroup.userData.spill = spill;
 
         introScene.add(iglooGroup);
     }
 
-    function createGlowTexture(colorStr) {
+    function createGlowTexture() {
         const c = document.createElement("canvas");
-        c.width = c.height = 128;
+        c.width = c.height = 256;
         const ctx = c.getContext("2d");
-        const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-        g.addColorStop(0, "rgba(255, 120, 0, 1)");
-        g.addColorStop(0.3, "rgba(255, 80, 0, 0.4)");
+        const g = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+        g.addColorStop(0, "rgba(255, 100, 0, 1)");
+        g.addColorStop(0.3, "rgba(255, 60, 0, 0.4)");
         g.addColorStop(1, "rgba(0,0,0,0)");
         ctx.fillStyle = g;
-        ctx.fillRect(0, 0, 128, 128);
+        ctx.fillRect(0, 0, 256, 256);
         return new THREE.CanvasTexture(c);
     }
 
-    /* ==== DENSE CINEMATIC SNOW ==== */
+    /* ==== CINEMATIC SNOW ==== */
     function createPremiumSnow() {
-        const count = 6000;
+        const count = 7000;
         const geo = new THREE.BufferGeometry();
         const pos = new Float32Array(count * 3);
         const vels = new Float32Array(count);
         for (let i = 0; i < count; i++) {
-            pos[i * 3] = (Math.random() - 0.5) * 150;
-            pos[i * 3 + 1] = Math.random() * 60;
-            pos[i * 3 + 2] = (Math.random() - 0.5) * 150;
-            vels[i] = 0.03 + Math.random() * 0.08;
+            pos[i * 3] = (Math.random() - 0.5) * 160;
+            pos[i * 3+1] = Math.random() * 60;
+            pos[i * 3+2] = (Math.random() - 0.5) * 160;
+            vels[i] = 0.04 + Math.random() * 0.1;
         }
         geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-
-        const tex = createSnowFlakeTexture();
+        const tex = createSnowTex();
         const mat = new THREE.PointsMaterial({
-            size: 0.18, map: tex, transparent: true, opacity: 0.6,
+            size: 0.16, map: tex, transparent: true, opacity: 0.65,
             blending: THREE.AdditiveBlending, depthWrite: false
         });
         snowParticles = new THREE.Points(geo, mat);
@@ -221,7 +234,7 @@
         introScene.add(snowParticles);
     }
 
-    function createSnowFlakeTexture() {
+    function createSnowTex() {
         const c = document.createElement("canvas");
         c.width = c.height = 32;
         const ctx = c.getContext("2d");
@@ -233,72 +246,76 @@
         return new THREE.CanvasTexture(c);
     }
 
-    /* ==== ANIMATION LOOP ==== */
+    /* ==== ANIMATION: HANDHELD & POLISH ==== */
     function introAnimate() {
         if (!introActive) return;
         introAnimId = requestAnimationFrame(introAnimate);
         introClock.t += 0.016;
         const t = introClock.t;
 
-        // Dynamic Camera Orbit (Tighter focus on igloo)
-        const radius = 17;
-        const speed = 0.07;
-        introCamera.position.x = Math.sin(t * speed) * radius;
-        introCamera.position.z = Math.cos(t * speed) * radius;
-        introCamera.position.y = 3.5 + Math.sin(t * 0.12) * 0.8;
-        introCamera.lookAt(0, 1.8, 0);
+        // Cinematic Orbit + Handheld Shake
+        const radius = 18;
+        const speed = 0.08;
+        const orbitX = Math.sin(t * speed) * radius;
+        const orbitZ = Math.cos(t * speed) * radius;
+        
+        // Handheld wiggle (Multi-frequency noise)
+        const shakeX = Math.sin(t * 1.5) * 0.2 + Math.cos(t * 3.1) * 0.1;
+        const shakeY = Math.cos(t * 1.2) * 0.15 + Math.sin(t * 2.8) * 0.05;
+        const shakeZ = Math.sin(t * 0.9) * 0.1;
 
-        // Falling Snow Animation
+        introCamera.position.set(orbitX + shakeX, 4 + shakeY, orbitZ + shakeZ);
+        introCamera.lookAt(shakeX * 2, 2 + shakeY, shakeZ * 2);
+
+        // Snow Falling
         if (snowParticles) {
             const pa = snowParticles.geometry.attributes.position;
             const vs = snowParticles.userData.vels;
             for (let i = 0; i < pa.count; i++) {
-                let py = pa.getY(i) - vs[i];
-                let px = pa.getX(i) + Math.sin(t * 0.8 + i) * 0.005;
-                if (py < -2) py = 60;
-                pa.setX(i, px);
-                pa.setY(i, py);
+                let y = pa.getY(i) - vs[i];
+                let x = pa.getX(i) + Math.sin(t + i) * 0.006;
+                if (y < -2.1) y = 60;
+                pa.setX(i, x);
+                pa.setY(i, y);
             }
             pa.needsUpdate = true;
         }
 
-        // Igloo Dynamic Effects
+        // Fire & Glow Pulsing
         if (iglooGroup) {
             const campfire = iglooGroup.userData.campfire;
-            const glow = iglooGroup.userData.entryGlow;
+            const spill = iglooGroup.userData.spill;
             if (campfire) {
-                // Intense flickering
-                campfire.intensity = 4.0 + Math.sin(t * 8) * 0.6 + Math.random() * 0.4;
+                // High-freq flicker + low-freq pulse
+                campfire.intensity = 5.0 + Math.sin(t * 12) * 0.8 + Math.cos(t * 3) * 0.5 + Math.random() * 0.4;
             }
-            if (glow) {
-                // Pulsing volumetric effect
-                glow.material.opacity = 0.5 + Math.sin(t * 4) * 0.15;
-                const s = 6 + Math.sin(t * 2.5) * 0.4;
-                glow.scale.set(s, s, 1);
+            if (spill) {
+                spill.material.opacity = 0.6 + Math.sin(t * 5.5) * 0.15;
+                const s = 8 + Math.sin(t * 2.1) * 0.6;
+                spill.scale.set(s, s*0.9, 1);
             }
         }
 
         introComposer.render();
     }
 
-    /* ==== TRANSITION LOGIC ==== */
+    /* ==== TRANSITION ==== */
     window.triggerIntroTransition = function (callback) {
         introActive = false;
         cancelAnimationFrame(introAnimId);
-
-        // Render transition loop
-        function loop() {
+        
+        function tLoop() {
             if (introComposer) introComposer.render();
-            if (!introActive) requestAnimationFrame(loop);
+            if (!introActive) requestAnimationFrame(tLoop);
         }
-        loop();
+        tLoop();
 
-        gsap.to(introCamera.position, { y: 70, duration: 2.5, ease: "power2.in" });
-        gsap.to(introBloom, { strength: 10, duration: 2.5 });
+        gsap.to(introCamera.position, { y: 80, duration: 2.5, ease: "power2.in" });
+        gsap.to(introBloom, { strength: 12, duration: 2.5 });
 
-        const whiteout = document.getElementById("intro-whiteout");
-        if (whiteout) {
-            gsap.to(whiteout, {
+        const overlay = document.getElementById("intro-whiteout");
+        if (overlay) {
+            gsap.to(overlay, {
                 opacity: 1, duration: 2.5, delay: 0.5,
                 onComplete: () => {
                     introRenderer.dispose();
