@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 let introRenderer, introScene, introCamera, introComposer, introBloom;
 let snowParticles, iglooGroup;
@@ -48,7 +48,7 @@ window.initIntroScene = function () {
     /* ---- BUILDER FUNCTIONS ---- */
     createCinematicTerrain();
     createPremiumSnow();
-    loadBlockyIgloo();
+    createBeveledIgloo();
 
     /* ---- POST-PROCESSING ---- */
     const renderScene = new RenderPass(introScene, introCamera);
@@ -94,42 +94,99 @@ function createCinematicTerrain() {
     introScene.add(terrain);
 }
 
-function loadBlockyIgloo() {
+function createBeveledIgloo() {
     iglooGroup = new THREE.Group();
     iglooGroup.position.set(0, -0.1, 0);
 
-    // 1:1 REAL ICE MATERIAL (The TikTok Secret)
     const iceBlockMat = new THREE.MeshPhysicalMaterial({
         color: 0xeefbff,
         emissive: 0x44aaff,
         emissiveIntensity: 0.2,
-        roughness: 0.2,
+        roughness: 0.35,
         metalness: 0,
-        transmission: 0.9, // Refraction!
-        ior: 1.31,        // Index of Refraction for Ice
-        thickness: 2.0,   // Light passing THROUGH the block
+        transmission: 0.9, 
+        ior: 1.31,        
+        thickness: 2.5,   
         specularIntensity: 1.0,
         clearcoat: 0.5,
         transparent: true
     });
 
-    const loader = new OBJLoader();
-    loader.load('igloo.obj', (object) => {
-        object.traverse((child) => {
-            if (child.isMesh) {
-                child.material = iceBlockMat;
-            }
-        });
-        iglooGroup.add(object);
-    });
+    const bevelRadius = 0.06;
+    const blockD = 0.35;
+    const blockH = 0.55;
+    const domeRadius = 3.6;
+
+    // Use a shared geometry for performance
+    const addBlock = (w, h, d, pos, rot) => {
+        const geo = new RoundedBoxGeometry(w, h, d, 2, bevelRadius);
+        const mesh = new THREE.Mesh(geo, iceBlockMat);
+        mesh.position.set(pos.x, pos.y, pos.z);
+        mesh.rotation.set(rot.x, rot.y, rot.z);
+        iglooGroup.add(mesh);
+    };
+
+    const addDomeBlock = (w, h, d, radius, phi, theta) => {
+        const cp = Math.cos(phi), sp = Math.sin(phi);
+        const ct = Math.cos(theta), st = Math.sin(theta);
+        const px = radius * ct * sp;
+        const py = radius * st;
+        const pz = radius * ct * cp;
+        addBlock(w, h, d, { x: px, y: py, z: pz }, { x: -theta, y: phi, z: 0 });
+    };
+
+    // 1. DOME
+    const rows = 11;
+    for (let r = 0; r < rows; r++) {
+        const theta = (r / rows) * (Math.PI / 2);
+        if (theta > (Math.PI/2) * 0.9) continue; 
+        const radiusAtTheta = domeRadius * Math.cos(theta);
+        const circ = 2 * Math.PI * radiusAtTheta;
+        const numBlocks = Math.max(1, Math.floor(circ / 1.5));
+        const angleStep = (Math.PI * 2) / numBlocks;
+        const stagger = (r % 2 === 0) ? 0 : angleStep / 2;
+        for (let i = 0; i < numBlocks; i++) {
+            const phi = i * angleStep + stagger;
+            if (theta < 0.6 && (phi < 0.4 || phi > Math.PI*2 - 0.4)) continue;
+            const bw = (circ / numBlocks) * 0.94;
+            addDomeBlock(bw, blockH * 0.94, blockD, domeRadius, phi, theta);
+        }
+    }
+
+    // 2. TUNNEL
+    const tWidth = 1.3, tHeight = 1.6, tArches = 6;
+    for (let i = 0; i < tArches; i++) {
+        const zDist = domeRadius - 0.5 + (i * 0.6);
+        const numArchBlocks = 7;
+        for (let j = 0; j < numArchBlocks; j++) {
+            const archAngle = (j / (numArchBlocks - 1)) * Math.PI;
+            const x = Math.cos(archAngle) * tWidth;
+            const y = Math.sin(archAngle) * tHeight;
+            const staggerY = (i % 2 === 0) ? 0 : 0.05;
+            addBlock(1.0, 0.6, 0.5, { x: x, y: y + staggerY, z: zDist }, { x: 0, y: 0, z: archAngle - Math.PI/2 });
+        }
+    }
+
+    // 3. CHIMNEY
+    const chimneyRadius = 0.8;
+    for (let r = 0; r < 2; r++) {
+        const cY = domeRadius - 0.2 + (r * 0.5);
+        const numCBlocks = 6;
+        for (let i = 0; i < numCBlocks; i++) {
+            const phi = (i / numCBlocks) * Math.PI * 2 + (r * 0.3);
+            const cx = Math.cos(phi) * chimneyRadius;
+            const cz = Math.sin(phi) * chimneyRadius;
+            addBlock(0.8, 0.5, 0.4, { x: cx, y: cY, z: cz }, { x: 0, y: -phi + Math.PI/2, z: 0 });
+        }
+    }
 
     // Intense internal pulsing fire
-    const campfire = new THREE.PointLight(0xffaa22, 20.0, 30);
+    const campfire = new THREE.PointLight(0xffaa22, 25.0, 30);
     campfire.position.set(0, 1.5, 1.0);
     iglooGroup.add(campfire);
     iglooGroup.userData.campfire = campfire;
 
-    // Volumetric glow at the end of the tunnel
+    // Volumetric glow
     const glowTex = createGlowTexture();
     const glowMat = new THREE.SpriteMaterial({ 
         map: glowTex, transparent: true, opacity: 0.8, 
@@ -194,7 +251,7 @@ function introAnimate() {
     }
 
     if (iglooGroup && iglooGroup.userData.campfire) {
-        iglooGroup.userData.campfire.intensity = 15 + Math.sin(t * 10) * 5;
+        iglooGroup.userData.campfire.intensity = 20 + Math.sin(t * 10) * 8;
     }
 
     introComposer.render();
