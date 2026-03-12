@@ -145,7 +145,7 @@
     /* ==== HIGH-FIDELITY IGLOO ==== */
     function loadBlockyIgloo() {
         iglooGroup = new THREE.Group();
-        iglooGroup.position.set(0, -2, 0);
+        iglooGroup.position.set(0, -0.2, 0);
 
         // 1:1 Solid Frosted Ice Material
         const iceBlockMat = new THREE.MeshStandardMaterial({
@@ -158,7 +158,7 @@
             opacity: 1.0
         });
 
-        const edgeMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 });
+        const edgeMat = new THREE.LineBasicMaterial({ color: 0xccf0ff, transparent: true, opacity: 0.6 });
 
         const loader = new THREE.OBJLoader();
         loader.load('igloo.obj', function (object) {
