@@ -98,8 +98,8 @@ function buildIglooObj() {
         const yCurrent = radius * Math.sin(theta1);
         
         const circ = 2 * Math.PI * rCurrent;
-        // Target block width is much larger ~1.35
-        const numBlocks = Math.max(1, Math.floor(circ / 1.35));
+        // Even larger blocks ~1.45 for a cleaner dome
+        const numBlocks = Math.max(1, Math.floor(circ / 1.45));
         const angleStep = (Math.PI * 2) / numBlocks;
 
         for (let i = 0; i < numBlocks; i++) {
@@ -115,22 +115,19 @@ function buildIglooObj() {
             const x = Math.cos(angle) * rCurrent;
             const z = Math.sin(angle) * rCurrent;
             
-            // Tilt for dome curvature
+            // Perfect tangency
             const rotX = -theta1 * Math.sin(angle);
             const rotZ = theta1 * Math.cos(angle);
             
-            // Very minimal jitter for an "architectural" look
-            const jitterX = (Math.random() - 0.5) * 0.02;
-            const jitterZ = (Math.random() - 0.5) * 0.02;
-
-            const bw = (circ / numBlocks) * 0.95; // Slight gaps for mortar 
+            // No jitter for a perfect architect's model
+            const bw = (circ / numBlocks) * 0.98; // Tighter gaps
             writer.addBox(
                 bw, 
-                blockH * 0.95, 
+                blockH * 0.98, 
                 blockD,
-                x + jitterX, 
+                x, 
                 yCurrent + blockH/2, 
-                z + jitterZ,
+                z,
                 -angle, 
                 rotX, 
                 rotZ

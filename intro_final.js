@@ -163,16 +163,15 @@
             clearcoatRoughness: 0.1
         });
 
-        // Mortar / Inner Fill (This makes the white lines between blocks)
-        const mortarMat = new THREE.MeshStandardMaterial({
-            color: 0xbbddff,
-            emissive: 0x88ccff,
-            emissiveIntensity: 0.4,
-            roughness: 1.0,
-            side: THREE.BackSide // To see from inside too
+        // Mortar / Inner Fill (This makes the white/cyan lines between blocks)
+        const mortarMat = new THREE.MeshBasicMaterial({
+            color: 0xaaddff,
+            transparent: true,
+            opacity: 0.8,
+            side: THREE.BackSide
         });
         const mortarDom = new THREE.Mesh(
-            new THREE.SphereGeometry(3.7, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2),
+            new THREE.SphereGeometry(3.72, 32, 24, 0, Math.PI * 2, 0, Math.PI / 2),
             mortarMat
         );
         iglooGroup.add(mortarDom);
