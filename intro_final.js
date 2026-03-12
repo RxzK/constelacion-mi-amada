@@ -147,18 +147,17 @@
         iglooGroup = new THREE.Group();
         iglooGroup.position.set(0, -0.2, 0);
 
-        // 1:1 Solid Frosted Ice Material
+        // 1:1 Solid Frosted Ice Material (Matt Finish)
         const iceBlockMat = new THREE.MeshStandardMaterial({
-            color: 0xeefaff,
+            color: 0xcceeff,
             emissive: 0x4488ff,
             emissiveIntensity: 0.1,
-            roughness: 0.8, // Frosted look
+            roughness: 0.9, 
             metalness: 0.0,
-            transparent: false,
-            opacity: 1.0
+            transparent: false
         });
 
-        const edgeMat = new THREE.LineBasicMaterial({ color: 0xccf0ff, transparent: true, opacity: 0.6 });
+        const edgeMat = new THREE.LineBasicMaterial({ color: 0xeefaff, transparent: true, opacity: 0.4 });
 
         const loader = new THREE.OBJLoader();
         loader.load('igloo.obj', function (object) {
@@ -169,7 +168,7 @@
                     child.receiveShadow = true;
                     child.geometry.computeVertexNormals();
 
-                    // Create structured outlines
+                    // Soft outlines
                     const edges = new THREE.EdgesGeometry(child.geometry, 15);
                     const line = new THREE.LineSegments(edges, edgeMat);
                     child.add(line);
@@ -178,22 +177,22 @@
             iglooGroup.add(object);
         });
 
-        // Glowing Core / Mortar Gaps
+        // Glowing Mortar (Extremely bright to bleed through gaps)
         const mortarMat = new THREE.MeshBasicMaterial({
-            color: 0x88ccff,
+            color: 0xbbeeff,
             transparent: true,
-            opacity: 0.4,
+            opacity: 0.8,
             side: THREE.BackSide
         });
         const mortarDom = new THREE.Mesh(
-            new THREE.SphereGeometry(3.6, 32, 24, 0, Math.PI * 2, 0, Math.PI / 2),
+            new THREE.SphereGeometry(3.58, 32, 24, 0, Math.PI * 2, 0, Math.PI / 2),
             mortarMat
         );
         iglooGroup.add(mortarDom);
 
-        // Warm internal pulsing fire
-        const campfire = new THREE.PointLight(0xff5500, 5.0, 18);
-        campfire.position.set(0, 1.5, 2.5);
+        // Intense internal pulsing fire
+        const campfire = new THREE.PointLight(0xffaa22, 10.0, 20);
+        campfire.position.set(0, 1.5, 2.0);
         campfire.castShadow = true;
         campfire.shadow.bias = -0.005;
         iglooGroup.add(campfire);
