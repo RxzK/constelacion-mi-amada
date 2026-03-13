@@ -104,20 +104,17 @@ function createBeveledIgloo() {
     // Generate Frost Noise Texture
     const frostNormal = createIceNoiseTexture();
     
-    // Transmissive, textured frosty ice material
-    const iceBlockMat = new THREE.MeshPhysicalMaterial({
+    // Semi-transparent frosty ice material (Standard to avoid transmission depth issues with fog)
+    const iceBlockMat = new THREE.MeshStandardMaterial({
         color: 0xccffff,           // Icy base color
         emissive: 0x0a33aa,        // Very slight dark blue base glow
-        emissiveIntensity: 0.2,    // Stop the surface from blowing out
-        transmission: 0.95,        // Highly transmissive to let internal fire bleed through
-        roughness: 0.35,           // Semi-rough for frosted look
+        emissiveIntensity: 0.1,    // Stop the surface from blowing out
+        roughness: 0.8,            // High roughness for frosted look
         metalness: 0.1,
-        thickness: 0.8,            // Volume for refraction
-        ior: 1.3,                  // Ice Index of Refraction
         bumpMap: frostNormal,      // Apply physical crystalline texture
         bumpScale: 0.05,
         transparent: true,
-        opacity: 0.98
+        opacity: 0.90              // Semi-translucent so internal light passes through
     });
 
     const bevelRadius = 0.08; 
@@ -205,7 +202,7 @@ function createBeveledIgloo() {
     }
 
     // MASSIVE internal pulsing fire to bleed through the cracks
-    const campfire = new THREE.PointLight(0x44aaff, 350.0, 25);
+    const campfire = new THREE.PointLight(0x66ccff, 400.0, 30);
     campfire.position.set(0, 1.0, 0.5);
     iglooGroup.add(campfire);
     iglooGroup.userData.campfire = campfire;
