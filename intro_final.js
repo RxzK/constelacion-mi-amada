@@ -101,20 +101,29 @@ function createBeveledIgloo() {
     iglooGroup = new THREE.Group();
     iglooGroup.position.set(0, -0.1, 0);
 
-    // Aggressive Stylized Glow Material
-    const iceBlockMat = new THREE.MeshStandardMaterial({
-        color: 0xeefbff,
-        emissive: 0x2288ff, // Strong icy blue glow
-        emissiveIntensity: 2.5, // Pushed way past 1.0 to force bloom
-        roughness: 0.5, 
-        metalness: 0.0,
+    // Generate Frost Noise Texture
+    const frostNormal = createIceNoiseTexture();
+    
+    // Transmissive, textured frosty ice material
+    const iceBlockMat = new THREE.MeshPhysicalMaterial({
+        color: 0xccffff,           // Icy base color
+        emissive: 0x0a33aa,        // Very slight dark blue base glow
+        emissiveIntensity: 0.2,    // Stop the surface from blowing out
+        transmission: 0.95,        // Highly transmissive to let internal fire bleed through
+        roughness: 0.35,           // Semi-rough for frosted look
+        metalness: 0.1,
+        thickness: 0.8,            // Volume for refraction
+        ior: 1.3,                  // Ice Index of Refraction
+        bumpMap: frostNormal,      // Apply physical crystalline texture
+        bumpScale: 0.05,
         transparent: true,
-        opacity: 0.95 
+        opacity: 0.98
     });
 
     const bevelRadius = 0.08; 
-    const blockD = 0.50; // VERY Thicker blocks to overlap
-    const blockH = 0.65; // Taller blocks to overlap
+    // Shrink blocks to create micro-fissures for light to escape
+    const blockD = 0.46; // Thinner depth
+    const blockH = 0.55; // Shorter height
     const domeRadius = 3.6;
 
     // Shared geometry
@@ -160,8 +169,8 @@ function createBeveledIgloo() {
         for (let i = 0; i < numBlocks; i++) {
             const phi = i * angleStep + stagger;
             if (theta < 0.6 && (phi < 0.4 || phi > Math.PI*2 - 0.4)) continue;
-            // Blocks are WIDER than the step to overlap
-            const bw = (circ / numBlocks) * 1.1; 
+            // Blocks are WIDER than the step to overlap slightly, but leave gaps
+            const bw = (circ / numBlocks) * 0.95; 
             addDomeBlock(bw, blockH, blockD, domeRadius, phi, theta);
         }
     }
@@ -176,8 +185,8 @@ function createBeveledIgloo() {
             const x = Math.cos(archAngle) * tWidth;
             const y = Math.sin(archAngle) * tHeight;
             const staggerY = (i % 2 === 0) ? 0 : 0.05;
-            // Overlapping blocks (1.2 instead of 1.0)
-            addBlock(1.2, 0.7, 0.7, { x: x, y: y + staggerY, z: zDist }, { x: 0, y: 0, z: archAngle - Math.PI/2 });
+            // Shrunk to leave gaps (1.0 instead of 1.2)
+            addBlock(1.0, 0.6, 0.6, { x: x, y: y + staggerY, z: zDist }, { x: 0, y: 0, z: archAngle - Math.PI/2 });
         }
     }
 
@@ -190,14 +199,14 @@ function createBeveledIgloo() {
             const phi = (i / numCBlocks) * Math.PI * 2 + (r * 0.3);
             const cx = Math.cos(phi) * chimneyRadius;
             const cz = Math.sin(phi) * chimneyRadius;
-            // Overlapping blocks
-            addBlock(1.1, 0.6, 0.6, { x: cx, y: cY, z: cz }, { x: 0, y: -phi + Math.PI/2, z: 0 });
+            // Shrunk blocks
+            addBlock(0.9, 0.5, 0.5, { x: cx, y: cY, z: cz }, { x: 0, y: -phi + Math.PI/2, z: 0 });
         }
     }
 
-    // Intense internal pulsing fire
-    const campfire = new THREE.PointLight(0xffaa22, 25.0, 30);
-    campfire.position.set(0, 1.5, 1.0);
+    // MASSIVE internal pulsing fire to bleed through the cracks
+    const campfire = new THREE.PointLight(0x44aaff, 350.0, 25);
+    campfire.position.set(0, 1.0, 0.5);
     iglooGroup.add(campfire);
     iglooGroup.userData.campfire = campfire;
 
@@ -221,8 +230,9 @@ function createGlowTexture() {
     c.width = c.height = 256;
     const ctx = c.getContext("2d");
     const g = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
-    g.addColorStop(0, "rgba(255, 120, 0, 1)");
-    g.addColorStop(0.3, "rgba(255, 60, 0, 0.4)");
+    // Cyan/Blue inner glow to match the reference
+    g.addColorStop(0, "rgba(80, 200, 255, 1)");
+    g.addColorStop(0.3, "rgba(0, 100, 255, 0.4)");
     g.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, 256, 256);
@@ -266,7 +276,7 @@ function introAnimate() {
     }
 
     if (iglooGroup && iglooGroup.userData.campfire) {
-        iglooGroup.userData.campfire.intensity = 20 + Math.sin(t * 10) * 8;
+        iglooGroup.userData.campfire.intensity = 300 + Math.sin(t * 12) * 80;
     }
 
     introComposer.render();
