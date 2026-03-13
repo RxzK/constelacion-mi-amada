@@ -222,6 +222,30 @@ function createBeveledIgloo() {
     introScene.add(iglooGroup);
 }
 
+function createIceNoiseTexture() {
+    const size = 512;
+    const canvas = document.createElement("canvas");
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    const imgData = ctx.createImageData(size, size);
+    
+    // Simple white noise for bump
+    for (let i = 0; i < imgData.data.length; i += 4) {
+        const val = Math.random() * 255;
+        imgData.data[i] = val;
+        imgData.data[i+1] = val;
+        imgData.data[i+2] = 255; // Normal map Z is full
+        imgData.data[i+3] = 255;
+    }
+    ctx.putImageData(imgData, 0, 0);
+    
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(4, 2);
+    return tex;
+}
+
 function createGlowTexture() {
     const c = document.createElement("canvas");
     c.width = c.height = 256;
