@@ -4,13 +4,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
-// --- Global Noise Helpers (Defined at top to avoid Temporal Dead Zone) ---
-const noise = (x, y) => {
+// --- Global Noise Helpers (Function declarations for safe hoisting) ---
+function noise(x, y) {
     const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
     return n - Math.floor(n);
-};
+}
 
-const smoothNoise = (x, y) => {
+function smoothNoise(x, y) {
     const xf = x % 1, yf = y % 1;
     const xi = Math.floor(x), yi = Math.floor(y);
     const a = noise(xi, yi);
@@ -20,16 +20,16 @@ const smoothNoise = (x, y) => {
     const ux = xf * xf * (3 - 2 * xf);
     const uy = yf * yf * (3 - 2 * yf);
     return a * (1-ux) * (1-uy) + b * ux * (1-uy) + c * (1-ux) * uy + d * ux * uy;
-};
+}
 
-const fbm = (x, y, octaves = 6) => {
+function fbm(x, y, octaves = 6) {
     let val = 0, amp = 0.5, freq = 1;
     for(let i=0; i<octaves; i++) {
         val += smoothNoise(x * freq, y * freq) * amp;
         freq *= 2.1; amp *= 0.5;
     }
     return val;
-};
+}
 
 let introRenderer, introScene, introCamera, introComposer, introBloom;
 let snowParticles, iglooGroup;
@@ -129,24 +129,20 @@ function createBeveledIgloo() {
     iglooGroup = new THREE.Group();
     iglooGroup.position.set(0, -0.1, 0);
 
-    // 1. ULTIMATE ICE MATERIAL (MeshPhysical for SSS)
+    // 1. HIGH-FIDELITY ICE MATERIAL (Standard fallback for GPU stability)
     const { normalMap, roughnessMap } = generateIceTextures();
     
-    const iceBlockMat = new THREE.MeshPhysicalMaterial({
-        color: 0xffffff,           // Pure white base
-        transmission: 0.95,        // Highly transmissive
-        thickness: 2.0,            // Light travel distance
-        roughness: 0.2,            // Smooth surface for refraction
-        metalness: 0.05,
-        ior: 1.31,                 // Real ice index of refraction
-        attenuationColor: 0x88ccff, // Light turns blue inside ice
-        attenuationDistance: 0.5,
+    const iceBlockMat = new THREE.MeshStandardMaterial({
+        color: 0xe0f5ff,           
+        emissive: 0x0066ff,
+        emissiveIntensity: 0.0,    // Controlled by hover
+        roughness: 0.8,            
+        metalness: 0.3,           
         normalMap: normalMap,      
-        normalScale: new THREE.Vector2(0.3, 0.3),
+        normalScale: new THREE.Vector2(0.5, 0.5),
         roughnessMap: roughnessMap, 
         transparent: false,
-        envMapIntensity: 1.0,
-        specularIntensity: 1.0,
+        opacity: 1.0
     });
 
     const bevelRadius = 0.08;
