@@ -1,8 +1,4 @@
 import * as THREE from 'three';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 // --- Global Noise Helpers (Function declarations for safe hoisting) ---
 function noise(x, y) {
@@ -31,7 +27,7 @@ function fbm(x, y, octaves = 6) {
     return val;
 }
 
-let introRenderer, introScene, introCamera, introComposer, introBloom;
+let introRenderer, introScene, introCamera;
 let snowParticles, iglooGroup;
 let introAnimId;
 let introActive = true;
@@ -42,11 +38,12 @@ window.initIntroScene = function () {
         const canvas = document.getElementById("intro-canvas");
         if (!canvas) return;
 
-        // Visual debug indicator (will be hidden if scene renders)
-        const debugInfo = document.createElement('div');
-        debugInfo.id = 'scene-debug';
-        debugInfo.style.cssText = 'position:fixed;top:10;left:10;color:red;z-index:9999;font-family:monospace;pointer-events:none;';
-        document.body.appendChild(debugInfo);
+        // VISUAL DEBUG - Persistent for v6.0.4 verification
+        const debug = document.createElement('div');
+        debug.id = 'render-debug';
+        debug.style.cssText = 'position:fixed;top:10px;left:10px;color:lime;z-index:9999;font-family:monospace;background:rgba(0,0,0,0.8);padding:8px;border:1px solid lime;';
+        debug.textContent = "v6.0.4 ENGINE LIVE - STABILITY MODE";
+        document.body.appendChild(debug);
 
         introActive = true;
 
@@ -147,19 +144,12 @@ function createBeveledIgloo() {
     
     const iceBlockMat = new THREE.MeshStandardMaterial({
         color: 0xe0f5ff,           
-        emissive: 0x0066ff,
-        emissiveIntensity: 0.0,    // Controlled by hover
         roughness: 0.8,            
-        metalness: 0.3,           
-        normalMap: normalMap,      
-        normalScale: new THREE.Vector2(0.5, 0.5),
-        roughnessMap: roughnessMap, 
-        transparent: false,
-        opacity: 1.0
+        metalness: 0.2,           
+        transparent: false
     });
 
-    const bevelRadius = 0.08;
-    const geo = new RoundedBoxGeometry(1, 1, 1, 3, bevelRadius);
+    const geo = new THREE.BoxGeometry(1, 1, 1);
 
     const addBlock = (w, h, d, pos, rot) => {
         const mesh = new THREE.Mesh(geo, iceBlockMat);
@@ -619,28 +609,7 @@ function introAnimate() {
         pa.needsUpdate = true;
     }
 
-    if (iglooGroup && iglooGroup.userData.campfire) {
-        // Complex flickering (noise-like)
-        const flicker = noise(t * 15, 0) * 150;
-        iglooGroup.userData.campfire.intensity = 300 + flicker;
-    }
-
-    // Update Smoke
-    if (iglooGroup && iglooGroup.userData.smoke) {
-        iglooGroup.userData.smoke.children.forEach((p, i) => {
-            p.position.y += 0.05;
-            p.position.x = Math.sin(t + p.userData.offset) * 0.5;
-            p.material.opacity -= 0.005;
-            if(p.material.opacity <= 0) {
-                p.position.y = 7.5;
-                p.material.opacity = 0.3;
-            }
-        });
-    }
-
-    if (introComposer) {
-        introComposer.render();
-    } else if (introRenderer && introScene && introCamera) {
+    if (introRenderer && introScene && introCamera) {
         introRenderer.render(introScene, introCamera);
     }
 }
