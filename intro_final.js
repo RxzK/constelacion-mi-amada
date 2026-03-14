@@ -34,20 +34,21 @@ window.initIntroScene = function () {
     introCamera.lookAt(0, 2, 0);
 
     /* ---- LIGHTS ---- */
-    const moonLight = new THREE.DirectionalLight(0xffffff, 0.8); // Darker night
-    moonLight.position.set(15, 25, 10);
+    const moonLight = new THREE.DirectionalLight(0xffffff, 0.4); // Even darker to let the ice glow dominate
+    moonLight.position.set(15, 25, -10); // Back-lighting
     introScene.add(moonLight);
 
-    const rimLight = new THREE.DirectionalLight(0xaaddff, 0.6);
+    const rimLight = new THREE.DirectionalLight(0xaaddff, 0.5);
     rimLight.position.set(-15, 10, -20);
     introScene.add(rimLight);
 
-    const ambient = new THREE.AmbientLight(0xffffff, 0.2); // Low ambient
+    const ambient = new THREE.AmbientLight(0x050a15, 0.2); 
     introScene.add(ambient);
 
     /* ---- BUILDER FUNCTIONS ---- */
     createCinematicTerrain();
     createPremiumSnow();
+    createEnvironment(); // New framing elements
     createBeveledIgloo();
 
     /* ---- POST-PROCESSING ---- */
@@ -101,20 +102,24 @@ function createBeveledIgloo() {
     iglooGroup = new THREE.Group();
     iglooGroup.position.set(0, -0.1, 0);
 
-    // 1. ADVANCED ICE TEXTURES
+    // 1. ULTIMATE ICE MATERIAL (MeshPhysical for SSS)
     const { normalMap, roughnessMap } = generateIceTextures();
     
-    const iceBlockMat = new THREE.MeshStandardMaterial({
-        color: 0xe0f5ff,           // Brighter, cleaner ice base
-        emissive: 0x000000,
-        emissiveIntensity: 0.0,
-        roughness: 0.9,            
-        metalness: 0.15,           
-        normalMap: normalMap,      // Sharp surface detail
-        normalScale: new THREE.Vector2(0.8, 0.8),
-        roughnessMap: roughnessMap, // Frosty vs Shiny patches
+    const iceBlockMat = new THREE.MeshPhysicalMaterial({
+        color: 0xffffff,           // Pure white base
+        transmission: 0.95,        // Highly transmissive
+        thickness: 2.0,            // Light travel distance
+        roughness: 0.2,            // Smooth surface for refraction
+        metalness: 0.05,
+        ior: 1.31,                 // Real ice index of refraction
+        attenuationColor: 0x88ccff, // Light turns blue inside ice
+        attenuationDistance: 0.5,
+        normalMap: normalMap,      
+        normalScale: new THREE.Vector2(0.3, 0.3),
+        roughnessMap: roughnessMap, 
         transparent: false,
-        opacity: 1.0
+        envMapIntensity: 1.0,
+        specularIntensity: 1.0,
     });
 
     const bevelRadius = 0.08;
@@ -215,15 +220,84 @@ function createBeveledIgloo() {
     }
 
     // Internal HDR Light
-    const campfire = new THREE.PointLight(0x00ccff, 350.0, 18);
+    const campfire = new THREE.PointLight(0x00ccff, 450.0, 20); // More intensity for SSS
     campfire.position.set(0, 1.3, 0.5);
     iglooGroup.add(campfire);
     iglooGroup.userData.campfire = campfire;
+
+    // 5. VOLUMETRIC GOD-RAYS
+    createLightBeams();
 
     introScene.add(iglooGroup);
 
     // Re-init Interaction
     initIglooInteraction();
+}
+
+function createEnvironment() {
+    const treeCount = 6;
+    for(let i=0; i<treeCount; i++) {
+        const angle = (i/treeCount) * Math.PI * 2 + Math.random();
+        const dist = 30 + Math.random() * 20;
+        const tx = Math.cos(angle) * dist;
+        const tz = Math.sin(angle) * dist;
+        createSnowPine(tx, -2, tz, 2.5 + Math.random() * 2);
+    }
+}
+
+function createSnowPine(x, y, z, s) {
+    const group = new THREE.Group();
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x0a2211, roughness: 1.0 });
+    const snowMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1.0 });
+
+    for(let i=0; i<3; i++) {
+        const cone = new THREE.Mesh(new THREE.ConeGeometry(2, 4, 8), leafMat);
+        cone.position.y = i * 2.5;
+        cone.scale.set(1 - i*0.2, 1, 1 - i*0.2);
+        group.add(cone);
+
+        const snow = new THREE.Mesh(new THREE.ConeGeometry(2.1, 4.1, 8), snowMat);
+        snow.position.y = i * 2.5 + 0.1;
+        snow.scale.set(1 - i*0.2, 0.2, 1 - i*0.2);
+        group.add(snow);
+    }
+    group.position.set(x, y, z);
+    group.scale.set(s, s, s);
+    introScene.add(group);
+}
+
+function createLightBeams() {
+    const beamGeo = new THREE.PlaneGeometry(1, 10);
+    const beamTex = createBeamTexture();
+    const beamMat = new THREE.MeshBasicMaterial({ 
+        map: beamTex, transparent: true, opacity: 0.2, 
+        blending: THREE.AdditiveBlending, side: THREE.DoubleSide, 
+        depthWrite: false 
+    });
+
+    const beamCount = 12;
+    for(let i=0; i<beamCount; i++) {
+        const beam = new THREE.Mesh(beamGeo, beamMat);
+        const phi = Math.random() * Math.PI * 2;
+        const theta = (Math.random() * 0.5) * Math.PI;
+        const r = 4.2;
+        beam.position.set(r * Math.sin(theta) * Math.cos(phi), r * Math.sin(theta) * Math.sin(phi), r * Math.cos(theta));
+        beam.lookAt(0,0,0);
+        beam.rotateX(Math.PI/2);
+        iglooGroup.add(beam);
+    }
+}
+
+function createBeamTexture() {
+    const c = document.createElement("canvas");
+    c.width = 128; c.height = 512;
+    const ctx = c.getContext("2d");
+    const g = ctx.createLinearGradient(0, 0, 0, 512);
+    g.addColorStop(0, "rgba(0, 150, 255, 0.8)");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 128, 512);
+    return new THREE.CanvasTexture(c);
 }
 
 function initIglooInteraction() {
