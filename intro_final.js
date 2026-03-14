@@ -31,7 +31,7 @@ function fbm(x, y, octaves = 6) {
     return val;
 }
 
-let introRenderer, introScene, introCamera;
+let introRenderer, introScene, introCamera, introComposer, introBloom;
 let snowParticles, iglooGroup;
 let introAnimId;
 let introActive = true;
@@ -41,13 +41,6 @@ window.initIntroScene = function () {
     try {
         const canvas = document.getElementById("intro-canvas");
         if (!canvas) return;
-
-        // VISUAL DEBUG - Persistent for v6.0.4 verification
-        const debug = document.createElement('div');
-        debug.id = 'render-debug';
-        debug.style.cssText = 'position:fixed;top:10px;left:10px;color:lime;z-index:9999;font-family:monospace;background:rgba(0,0,0,0.8);padding:8px;border:1px solid lime;';
-        debug.textContent = "v6.0.4 ENGINE LIVE - STABILITY MODE";
-        document.body.appendChild(debug);
 
         introActive = true;
 
@@ -88,14 +81,10 @@ window.initIntroScene = function () {
 
         /* ---- POST-PROCESSING ---- */
         const renderScene = new RenderPass(introScene, introCamera);
+        introBloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.8, 0.3, 1.0);
         introComposer = new EffectComposer(introRenderer);
         introComposer.addPass(renderScene);
-
-        // Optional Bloom (Disabled temporarily to test black screen)
-        /*
-        introBloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.8, 0.3, 1.0);
         introComposer.addPass(introBloom);
-        */
 
         window.addEventListener("resize", () => {
             if (!introActive) return;
@@ -106,14 +95,10 @@ window.initIntroScene = function () {
             introComposer.setSize(w, h);
         });
 
-        // If we got here, hide debug
-        debugInfo.style.display = 'none';
         introAnimate();
 
     } catch (e) {
         console.error("Intro Scene Crash:", e);
-        const errDiv = document.getElementById('scene-debug');
-        if (errDiv) errDiv.textContent = "Error: " + e.message;
     }
 };
 
@@ -143,13 +128,12 @@ function createBeveledIgloo() {
     iglooGroup = new THREE.Group();
     iglooGroup.position.set(0, -0.1, 0);
 
-    // 1. HIGH-FIDELITY ICE MATERIAL (Standard fallback for GPU stability)
     const { normalMap, roughnessMap } = generateIceTextures();
     
     const iceBlockMat = new THREE.MeshStandardMaterial({
         color: 0xe0f5ff,           
         emissive: 0x0066ff,
-        emissiveIntensity: 0.0,    // Controlled by hover
+        emissiveIntensity: 0.0,
         roughness: 0.8,            
         metalness: 0.3,           
         normalMap: normalMap,      
@@ -165,22 +149,16 @@ function createBeveledIgloo() {
     const addBlock = (w, h, d, pos, rot) => {
         const mesh = new THREE.Mesh(geo, iceBlockMat);
         mesh.scale.set(w, h, d);
-        
-        // Very subtle jitter for professional handmade feel
         const jRotX = (Math.random() - 0.5) * 0.02;
         const jRotY = (Math.random() - 0.5) * 0.02;
         const jRotZ = (Math.random() - 0.5) * 0.02;
         const jPosX = (Math.random() - 0.5) * 0.03;
         const jPosY = (Math.random() - 0.5) * 0.02;
         const jPosZ = (Math.random() - 0.5) * 0.03;
-        
         mesh.position.set(pos.x + jPosX, pos.y + jPosY, pos.z + jPosZ);
         mesh.rotation.set(rot.x + jRotX, rot.y + jRotY, rot.z + jRotZ);
-        
-        // Store for hover expansion
         mesh.userData.origPos = mesh.position.clone();
         mesh.userData.expandDir = mesh.position.clone().normalize();
-        
         iglooGroup.add(mesh);
         return mesh;
     };
@@ -189,49 +167,36 @@ function createBeveledIgloo() {
     const blockH = 0.65;
     const blockD = 0.6;
 
-    // 1. BASE RING (Solid grounding, slightly larger)
     const baseCount = 22;
     for(let i=0; i<baseCount; i++) {
         const phi = (i/baseCount) * Math.PI * 2;
-        // Skip entrance area for tunnel
         if (phi < 0.35 || phi > Math.PI*2 - 0.35) continue;
         const px = Math.cos(phi) * domeRadius;
         const pz = Math.sin(phi) * domeRadius;
         addBlock(1.5, 0.8, 0.8, {x: px, y: 0.3, z: pz}, {x: 0, y: -phi + Math.PI/2, z: 0});
     }
 
-    // 2. STAGGERED DOME
     const rows = 12;
     for (let r = 0; r < rows; r++) {
         const theta = (r / rows) * (Math.PI / 2);
         if (theta > (Math.PI/2) * 0.95) continue; 
-        
         const radiusAtTheta = domeRadius * Math.cos(theta);
         const y = domeRadius * Math.sin(theta);
-        
         const circ = 2 * Math.PI * radiusAtTheta;
         const numBlocks = Math.max(1, Math.floor(circ / 1.15)); 
         const angleStep = (Math.PI * 2) / numBlocks;
-        
-        // Offset every other row by half a block (Running Bond)
         const stagger = (r % 2 === 0) ? 0 : angleStep / 2;
-        
         for (let i = 0; i < numBlocks; i++) {
             const phi = i * angleStep + stagger;
-            
-            // Skip blocks where tunnel will be
             if (theta < 0.65 && (phi < 0.5 || phi > Math.PI*2 - 0.5)) continue;
-
             const px = radiusAtTheta * Math.sin(phi);
             const pz = radiusAtTheta * Math.cos(phi);
             const py = y;
-
-            const bw = (circ / numBlocks) * 0.992; // Micro-gaps for sharp crack-glow
+            const bw = (circ / numBlocks) * 0.992;
             addBlock(bw, blockH, blockD, {x: px, y: py, z: pz}, {x: -theta, y: phi, z: 0});
         }
     }
 
-    // 3. ARCHED INTEGRATED TUNNEL
     const tWidth = 1.8, tHeight = 2.0, tArches = 8;
     for (let i = 0; i < tArches; i++) {
         const zDist = (domeRadius - 0.5) + (i * 0.7);
@@ -240,8 +205,6 @@ function createBeveledIgloo() {
             const archAngle = (j / (archRes - 1)) * Math.PI;
             const x = Math.cos(archAngle) * tWidth;
             const y = Math.sin(archAngle) * tHeight;
-            
-            // Arch gets slightly smaller/tapered
             const tScale = 1.0 - (i * 0.04);
             addBlock(1.3 * tScale, 0.7 * tScale, 0.7 * tScale, 
                 { x: x * tScale, y: y * tScale, z: zDist }, 
@@ -250,7 +213,6 @@ function createBeveledIgloo() {
         }
     }
 
-    // 4. DEFINED CHIMNEY
     const chimneyY = domeRadius * 0.96;
     const cRadius = 0.9;
     const cCount = 6;
@@ -261,24 +223,16 @@ function createBeveledIgloo() {
         addBlock(1.1, 0.9, 0.6, {x: cx, y: chimneyY + 0.6, z: cz}, {x: 0, y: -phi + Math.PI/2, z: 0});
     }
 
-    // Internal HDR Light
-    const campfire = new THREE.PointLight(0x00ccff, 450.0, 20); // More intensity for SSS
+    const campfire = new THREE.PointLight(0x00ccff, 450.0, 20);
     campfire.position.set(0, 1.3, 0.5);
     iglooGroup.add(campfire);
     iglooGroup.userData.campfire = campfire;
 
-    // 5. VOLUMETRIC GOD-RAYS
     createLightBeams();
-
-    // 6. CHIMNEY SMOKE
     createChimneySmoke();
-
-    // 7. GROUND SPECULAR DISC
     createGroundSpecular();
 
     introScene.add(iglooGroup);
-
-    // Re-init Interaction
     initIglooInteraction();
 }
 
@@ -297,13 +251,11 @@ function createSnowPine(x, y, z, s) {
     const group = new THREE.Group();
     const leafMat = new THREE.MeshStandardMaterial({ color: 0x0a2211, roughness: 1.0 });
     const snowMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1.0 });
-
     for(let i=0; i<3; i++) {
         const cone = new THREE.Mesh(new THREE.ConeGeometry(2, 4, 8), leafMat);
         cone.position.y = i * 2.5;
         cone.scale.set(1 - i*0.2, 1, 1 - i*0.2);
         group.add(cone);
-
         const snow = new THREE.Mesh(new THREE.ConeGeometry(2.1, 4.1, 8), snowMat);
         snow.position.y = i * 2.5 + 0.1;
         snow.scale.set(1 - i*0.2, 0.2, 1 - i*0.2);
@@ -313,7 +265,6 @@ function createSnowPine(x, y, z, s) {
     group.scale.set(s, s, s);
     introScene.add(group);
 }
-
 
 function initIglooInteraction() {
     const raycaster = new THREE.Raycaster();
@@ -326,37 +277,23 @@ function initIglooInteraction() {
         if (isOpened) return;
         mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
         mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-        
         raycaster.setFromCamera(mouse, introCamera);
         const intersects = raycaster.intersectObjects(iglooGroup.children, true);
-        
         if (intersects.length > 0) {
             document.body.style.cursor = 'pointer';
-            
-            // 1. Subtle opening (max 0.25 for 1:1 look)
             gsap.to(expansionFactor, { 
-                value: 0.25, 
-                duration: 0.8, 
-                ease: "power2.out",
+                value: 0.25, duration: 0.8, ease: "power2.out",
                 onUpdate: () => updateInteractiveEffects(expansionFactor.value)
             });
-
-            // 2. Tilt-toward-mouse (Subtle cinematic lean)
             targetRotation.set(-mouse.y * 0.1, mouse.x * 0.2, 0);
             gsap.to(iglooGroup.rotation, { 
-                x: targetRotation.x, 
-                y: targetRotation.y, 
-                z: targetRotation.z, 
-                duration: 1.2, 
-                ease: "power2.out" 
+                x: targetRotation.x, y: targetRotation.y, z: targetRotation.z, 
+                duration: 1.2, ease: "power2.out" 
             });
         } else {
             document.body.style.cursor = 'default';
-            // 3. Smooth return to masonry perfect form
             gsap.to(expansionFactor, { 
-                value: 0.0, 
-                duration: 1.2, 
-                ease: "elastic.out(1, 0.8)",
+                value: 0.0, duration: 1.2, ease: "elastic.out(1, 0.8)",
                 onUpdate: () => updateInteractiveEffects(expansionFactor.value)
             });
             gsap.to(iglooGroup.rotation, { x: 0, y: 0, z: 0, duration: 2.0, ease: "power2.out" });
@@ -367,7 +304,6 @@ function initIglooInteraction() {
         if (isOpened) return;
         raycaster.setFromCamera(mouse, introCamera);
         const intersects = raycaster.intersectObjects(iglooGroup.children, true);
-        
         if (intersects.length > 0) {
             isOpened = true;
             document.body.style.cursor = 'default';
@@ -378,8 +314,6 @@ function initIglooInteraction() {
 
 function updateInteractiveEffects(factor) {
     if (!iglooGroup) return;
-    
-    // Sync Block Expansion
     iglooGroup.children.forEach(child => {
         if (child.isMesh && child.userData.origPos) {
             const dir = child.userData.expandDir;
@@ -387,8 +321,6 @@ function updateInteractiveEffects(factor) {
             child.position.y = child.userData.origPos.y + dir.y * factor;
             child.position.z = child.userData.origPos.z + dir.z * factor;
         }
-        
-        // Sync God-Ray Opacity
         if (child.userData.isBeam) {
             child.material.opacity = 0.2 + factor * 2.0;
         }
@@ -396,33 +328,17 @@ function updateInteractiveEffects(factor) {
 }
 
 function triggerPortalTransition() {
-    // Cinematic Final Enter (No shattering blocks to infinity, just light)
     if (iglooGroup.userData.campfire) {
-        gsap.to(iglooGroup.userData.campfire, {
-            intensity: 5000,
-            duration: 1.2,
-            ease: "power4.in"
-        });
+        gsap.to(iglooGroup.userData.campfire, { intensity: 5000, duration: 1.2, ease: "power4.in" });
     }
-
-    // Portal Flash
     gsap.to(introBloom, { strength: 20, duration: 1.5, ease: "power2.in" });
-    
-    setTimeout(() => {
-        if (window.triggerIntroTransition) {
-            window.triggerIntroTransition();
-        }
-    }, 1200);
+    setTimeout(() => { if (window.triggerIntroTransition) window.triggerIntroTransition(); }, 1200);
 }
 
 function createChimneySmoke() {
     const smokeCount = 8;
     const smokeGeo = new THREE.PlaneGeometry(0.8, 0.8);
-    const smokeMat = new THREE.MeshBasicMaterial({ 
-        color: 0xffffff, transparent: true, opacity: 0.3, 
-        blending: THREE.AdditiveBlending, depthWrite: false 
-    });
-
+    const smokeMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false });
     const smokeGroup = new THREE.Group();
     for(let i=0; i<smokeCount; i++) {
         const p = new THREE.Mesh(smokeGeo, smokeMat.clone());
@@ -436,10 +352,7 @@ function createChimneySmoke() {
 
 function createGroundSpecular() {
     const geo = new THREE.CircleGeometry(12, 32);
-    const mat = new THREE.MeshStandardMaterial({
-        color: 0x88ccff, transparent: true, opacity: 0.1,
-        roughness: 0.05, metalness: 0.8
-    });
+    const mat = new THREE.MeshStandardMaterial({ color: 0x88ccff, transparent: true, opacity: 0.1, roughness: 0.05, metalness: 0.8 });
     const disc = new THREE.Mesh(geo, mat);
     disc.rotation.x = -Math.PI/2;
     disc.position.y = -2.15;
@@ -449,17 +362,11 @@ function createGroundSpecular() {
 function createLightBeams() {
     const beamGeo = new THREE.PlaneGeometry(1, 10);
     const beamTex = createBeamTexture();
-    
     const beamCount = 12;
     for(let i=0; i<beamCount; i++) {
-        const beamMat = new THREE.MeshBasicMaterial({ 
-            map: beamTex, transparent: true, opacity: 0.2, 
-            blending: THREE.AdditiveBlending, side: THREE.DoubleSide, 
-            depthWrite: false 
-        });
+        const beamMat = new THREE.MeshBasicMaterial({ map: beamTex, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false });
         const beam = new THREE.Mesh(beamGeo, beamMat);
-        beam.userData.isBeam = true; // For sync
-        
+        beam.userData.isBeam = true;
         const phi = Math.random() * Math.PI * 2;
         const theta = (Math.random() * 0.5) * Math.PI;
         const r = 4.2;
@@ -470,24 +377,28 @@ function createLightBeams() {
     }
 }
 
-
+function createBeamTexture() {
+    const c = document.createElement("canvas");
+    c.width = 128; c.height = 512;
+    const ctx = c.getContext("2d");
+    const g = ctx.createLinearGradient(0, 0, 0, 512);
+    g.addColorStop(0, "rgba(0, 150, 255, 0.8)");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 128, 512);
+    return new THREE.CanvasTexture(c);
+}
 
 function generateIceTextures() {
-    const size = 128; // Reduced for GPU safety
+    const size = 128;
     const canvas = document.createElement("canvas");
     canvas.width = size; canvas.height = size;
-    const ctx = canvas.getContext("2d");
-
-    // 1. HEIGHT MAP (Grayscale)
     const heightData = new Uint8Array(size * size);
     for(let y=0; y<size; y++) {
         for(let x=0; x<size; x++) {
-            const val = fbm(x * 0.08, y * 0.08) * 255;
-            heightData[y * size + x] = val;
+            heightData[y * size + x] = fbm(x * 0.08, y * 0.08) * 255;
         }
     }
-
-    // 2. NORMAL MAP (Calculated from Height)
     const normalCanvas = document.createElement("canvas");
     normalCanvas.width = size; normalCanvas.height = size;
     const nCtx = normalCanvas.getContext("2d");
@@ -499,12 +410,8 @@ function generateIceTextures() {
             const l = heightData[((y) * size + (x - 1 + size)) % (size * size)] || heightData[idx];
             const d = heightData[((y + 1) * size + (x)) % (size * size)] || heightData[idx];
             const u = heightData[((y - 1 + size) * size + (x)) % (size * size)] || heightData[idx];
-            
-            const dx = (r - l) / 255.0;
-            const dy = (d - u) / 255.0;
-            const nx = -dx, ny = -dy, nz = 0.2; // Normalize scale
-            const mag = Math.sqrt(nx*nx + ny*ny + nz*nz);
-            
+            const dx = (r - l) / 255.0, dy = (d - u) / 255.0;
+            const nx = -dx, ny = -dy, nz = 0.2, mag = Math.sqrt(nx*nx + ny*ny + nz*nz);
             const pixelIdx = idx * 4;
             nImg.data[pixelIdx] = (nx/mag * 0.5 + 0.5) * 255;
             nImg.data[pixelIdx+1] = (ny/mag * 0.5 + 0.5) * 255;
@@ -516,19 +423,14 @@ function generateIceTextures() {
     const nTex = new THREE.CanvasTexture(normalCanvas);
     nTex.wrapS = nTex.wrapT = THREE.RepeatWrapping;
 
-    // 3. ROUGHNESS MAP (Based on Height)
     const roughCanvas = document.createElement("canvas");
     roughCanvas.width = size; roughCanvas.height = size;
     const rCtx = roughCanvas.getContext("2d");
     const rImg = rCtx.createImageData(size, size);
     for(let i=0; i<heightData.length; i++) {
         const v = heightData[i];
-        // Frosty bits are rough (white), shiny bits are smooth (dark)
         const rough = v < 128 ? v * 0.5 : v; 
-        rImg.data[i*4] = rough;
-        rImg.data[i*4+1] = rough;
-        rImg.data[i*4+2] = rough;
-        rImg.data[i*4+3] = 255;
+        rImg.data[i*4] = rough; rImg.data[i*4+1] = rough; rImg.data[i*4+2] = rough; rImg.data[i*4+3] = 255;
     }
     rCtx.putImageData(rImg, 0, 0);
     const rTex = new THREE.CanvasTexture(roughCanvas);
@@ -537,46 +439,14 @@ function generateIceTextures() {
     return { normalMap: nTex, roughnessMap: rTex };
 }
 
-function createGlowTexture() {
-    const c = document.createElement("canvas");
-    c.width = c.height = 256;
-    const ctx = c.getContext("2d");
-    const g = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
-    // Cyan/Blue inner glow to match the reference
-    g.addColorStop(0, "rgba(80, 200, 255, 1)");
-    g.addColorStop(0.3, "rgba(0, 100, 255, 0.4)");
-    g.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, 256, 256);
-    return new THREE.CanvasTexture(c);
-}
-
-function createPremiumSnow() {
-    const count = 5000;
-    const geo = new THREE.BufferGeometry();
-    const pos = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-        pos[i * 3] = (Math.random() - 0.5) * 150;
-        pos[i * 3 + 1] = Math.random() * 50;
-        pos[i * 3 + 2] = (Math.random() - 0.5) * 150;
-    }
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const mat = new THREE.PointsMaterial({ size: 0.15, color: 0xffffff, transparent: true, opacity: 0.6 });
-    snowParticles = new THREE.Points(geo, mat);
-    introScene.add(snowParticles);
-}
-
 function introAnimate() {
     if (!introActive) return;
     introAnimId = requestAnimationFrame(introAnimate);
     introClock.t += 0.016;
     const t = introClock.t;
-
-    const orbitX = Math.sin(t * 0.1) * 18;
-    const orbitZ = Math.cos(t * 0.1) * 18;
+    const orbitX = Math.sin(t * 0.1) * 18, orbitZ = Math.cos(t * 0.1) * 18;
     introCamera.position.set(orbitX, 4, orbitZ);
     introCamera.lookAt(0, 2, 0);
-
     if (snowParticles) {
         const pa = snowParticles.geometry.attributes.position;
         for (let i = 0; i < pa.count; i++) {
@@ -586,31 +456,19 @@ function introAnimate() {
         }
         pa.needsUpdate = true;
     }
-
     if (iglooGroup && iglooGroup.userData.campfire) {
-        // Complex flickering (noise-like)
-        const flicker = noise(t * 15, 0) * 150;
-        iglooGroup.userData.campfire.intensity = 300 + flicker;
+        iglooGroup.userData.campfire.intensity = 300 + noise(t * 15, 0) * 150;
     }
-
-    // Update Smoke
     if (iglooGroup && iglooGroup.userData.smoke) {
         iglooGroup.userData.smoke.children.forEach((p, i) => {
             p.position.y += 0.05;
             p.position.x = Math.sin(t + p.userData.offset) * 0.5;
             p.material.opacity -= 0.005;
-            if(p.material.opacity <= 0) {
-                p.position.y = 7.5;
-                p.material.opacity = 0.3;
-            }
+            if(p.material.opacity <= 0) { p.position.y = 7.5; p.material.opacity = 0.3; }
         });
     }
-
-    if (introComposer) {
-        introComposer.render();
-    } else if (introRenderer && introScene && introCamera) {
-        introRenderer.render(introScene, introCamera);
-    }
+    if (introComposer) introComposer.render();
+    else if (introRenderer && introScene && introCamera) introRenderer.render(introScene, introCamera);
 }
 
 window.triggerIntroTransition = function(callback) {
