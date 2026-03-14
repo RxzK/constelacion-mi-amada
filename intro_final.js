@@ -139,6 +139,11 @@ function createBeveledIgloo() {
         
         mesh.position.set(pos.x + jPosX, pos.y + jPosY, pos.z + jPosZ);
         mesh.rotation.set(rot.x + jRotX, rot.y + jRotY, rot.z + jRotZ);
+        
+        // Store for hover expansion
+        mesh.userData.origPos = mesh.position.clone();
+        mesh.userData.expandDir = mesh.position.clone().normalize();
+        
         iglooGroup.add(mesh);
         return mesh;
     };
@@ -304,61 +309,90 @@ function initIglooInteraction() {
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
     let isOpened = false;
+    let expansionFactor = { value: 0 };
 
     window.addEventListener('mousemove', (e) => {
+        if (isOpened) return;
         mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
         mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
         
         raycaster.setFromCamera(mouse, introCamera);
         const intersects = raycaster.intersectObjects(iglooGroup.children, true);
         
-        if (intersects.length > 0 && !isOpened) {
+        if (intersects.length > 0) {
             document.body.style.cursor = 'pointer';
-            gsap.to(iglooGroup.rotation, { y: mouse.x * 0.1, duration: 0.5 });
+            // Subtle "breathing" expansion on hover
+            gsap.to(expansionFactor, { 
+                value: 0.4, 
+                duration: 0.8, 
+                ease: "power2.out",
+                onUpdate: () => updateBlockExpansion(expansionFactor.value)
+            });
+            gsap.to(iglooGroup.rotation, { y: mouse.x * 0.15, duration: 1.0 });
         } else {
             document.body.style.cursor = 'default';
+            // Smoothly return to original masonry shape
+            gsap.to(expansionFactor, { 
+                value: 0.0, 
+                duration: 1.0, 
+                ease: "elastic.out(1, 0.75)",
+                onUpdate: () => updateBlockExpansion(expansionFactor.value)
+            });
+            gsap.to(iglooGroup.rotation, { y: 0, duration: 1.5 });
         }
     });
 
     window.addEventListener('click', () => {
         if (isOpened) return;
-        
         raycaster.setFromCamera(mouse, introCamera);
         const intersects = raycaster.intersectObjects(iglooGroup.children, true);
         
         if (intersects.length > 0) {
             isOpened = true;
+            document.body.style.cursor = 'default';
             openIglooBlocks();
         }
     });
 }
 
+function updateBlockExpansion(factor) {
+    if (!iglooGroup) return;
+    iglooGroup.children.forEach(child => {
+        if (child.isMesh && child.userData.origPos) {
+            const dir = child.userData.expandDir;
+            child.position.x = child.userData.origPos.x + dir.x * factor;
+            child.position.y = child.userData.origPos.y + dir.y * factor;
+            child.position.z = child.userData.origPos.z + dir.z * factor;
+        }
+    });
+}
+
 function openIglooBlocks() {
-    // Reveal the giant internal resplandor by moving blocks apart
+    // Final Transition Shatter (More dramatic than hover)
     iglooGroup.children.forEach((child) => {
-        if (child.isMesh) {
-            const dir = child.position.clone().normalize();
+        if (child.isMesh && child.userData.origPos) {
+            const dir = child.userData.expandDir;
             gsap.to(child.position, {
-                x: child.position.x + dir.x * 2,
-                y: child.position.y + dir.y * 2,
-                z: child.position.z + dir.z * 2,
-                duration: 2.0,
-                ease: "power2.out"
+                x: child.userData.origPos.x + dir.x * 6,
+                y: child.userData.origPos.y + dir.y * 6,
+                z: child.userData.origPos.z + dir.z * 6,
+                duration: 2.5,
+                ease: "expo.out"
             });
             gsap.to(child.rotation, {
-                x: child.rotation.x + (Math.random() - 0.5) * 2,
-                y: child.rotation.y + (Math.random() - 0.5) * 2,
-                duration: 2.0
+                x: child.rotation.x + (Math.random() - 0.5) * 4,
+                y: child.rotation.y + (Math.random() - 0.5) * 4,
+                duration: 2.5
             });
         }
     });
 
-    // Intensify the fire light
+    // Intensify the fire light to whiteout levels
     if (iglooGroup.userData.campfire) {
         gsap.to(iglooGroup.userData.campfire, {
-            intensity: 800,
-            duration: 1.5,
-            ease: "expo.out"
+            intensity: 2000,
+            duration: 2.0,
+            ease: "expo.in"
         });
     }
 
