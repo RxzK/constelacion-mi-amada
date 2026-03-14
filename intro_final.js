@@ -54,9 +54,9 @@ window.initIntroScene = function () {
     const renderScene = new RenderPass(introScene, introCamera);
     introBloom = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
-        1.5, // Strength (slightly reduced so it's not blinding)
-        0.8, // Radius
-        1.0  // Threshold (Only highly lit/emissive things like the igloo bleed!)
+        1.2, // Strength: Lowered from 1.5 to prevent massive blur
+        0.5, // Radius: Tighter radius for sharper lines
+        0.8  // Threshold: Anything brighter than 0.8 will bloom (like the crack lights)
     );
     introComposer = new EffectComposer(introRenderer);
     introComposer.addPass(renderScene);
@@ -104,17 +104,17 @@ function createBeveledIgloo() {
     // Generate Frost Noise Texture
     const frostNormal = createIceNoiseTexture();
     
-    // Semi-transparent frosty ice material (Standard to avoid transmission depth issues with fog)
+    // Opaque frosty ice material (forces light to ONLY escape through gaps)
     const iceBlockMat = new THREE.MeshStandardMaterial({
-        color: 0xccffff,           // Icy base color
-        emissive: 0x0a33aa,        // Very slight dark blue base glow
-        emissiveIntensity: 0.1,    // Stop the surface from blowing out
-        roughness: 0.8,            // High roughness for frosted look
+        color: 0xbbeeff,           // Icy base color (slightly more blue to contrast the cracks)
+        emissive: 0x052288,        // Very slight dark blue base glow
+        emissiveIntensity: 0.4,    // Subtle surface glow
+        roughness: 0.7,            // High roughness for frosted look
         metalness: 0.1,
         bumpMap: frostNormal,      // Apply physical crystalline texture
-        bumpScale: 0.05,
-        transparent: true,
-        opacity: 0.90              // Semi-translucent so internal light passes through
+        bumpScale: 0.08,           // Stronger texture depth
+        transparent: false,        // CRITICAL: Opaque!
+        opacity: 1.0               
     });
 
     const bevelRadius = 0.08; 
@@ -201,21 +201,21 @@ function createBeveledIgloo() {
         }
     }
 
-    // MASSIVE internal pulsing fire to bleed through the cracks
-    const campfire = new THREE.PointLight(0x66ccff, 400.0, 30);
+    // Intense internal pulsing fire (Shines through gaps)
+    const campfire = new THREE.PointLight(0x66ccff, 150.0, 20);
     campfire.position.set(0, 1.0, 0.5);
     iglooGroup.add(campfire);
     iglooGroup.userData.campfire = campfire;
 
-    // Volumetric glow
+    // Volumetric glow inside the dome
     const glowTex = createGlowTexture();
     const glowMat = new THREE.SpriteMaterial({ 
-        map: glowTex, transparent: true, opacity: 0.8, 
+        map: glowTex, transparent: true, opacity: 0.9, 
         blending: THREE.AdditiveBlending, depthWrite: false 
     });
     const spill = new THREE.Sprite(glowMat);
-    spill.position.set(0, 1.3, 6.5);
-    spill.scale.set(10, 8, 1);
+    spill.position.set(0, 1.5, 0); // Moved INSIDE the dome
+    spill.scale.set(6, 6, 6);      // Scaled to fit inside the dome
     iglooGroup.add(spill);
     iglooGroup.userData.spill = spill;
 
@@ -297,7 +297,7 @@ function introAnimate() {
     }
 
     if (iglooGroup && iglooGroup.userData.campfire) {
-        iglooGroup.userData.campfire.intensity = 300 + Math.sin(t * 12) * 80;
+        iglooGroup.userData.campfire.intensity = 100 + Math.sin(t * 8) * 50;
     }
 
     introComposer.render();
