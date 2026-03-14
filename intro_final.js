@@ -54,9 +54,9 @@ window.initIntroScene = function () {
     const renderScene = new RenderPass(introScene, introCamera);
     introBloom = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
-        1.2, // Strength
-        0.4, // Sharper radius
-        0.95 // VERY High threshold: ONLY the internal fires bleed through cracks
+        0.8, // Lower strength
+        0.3, // Very tight radius for sharp lines
+        1.0  // Absolute threshold: only HDR values bloom
     );
     introComposer = new EffectComposer(introRenderer);
     introComposer.addPass(renderScene);
@@ -106,13 +106,13 @@ function createBeveledIgloo() {
     
     // Opaque frosty ice material (forces light to ONLY escape through gaps)
     const iceBlockMat = new THREE.MeshStandardMaterial({
-        color: 0x88aaff,           // Darker blue for better contrast
-        emissive: 0x011144,        // Nearly zero surface emission
-        emissiveIntensity: 0.1,    
-        roughness: 0.8,            // High roughness for frosted look
+        color: 0x446688,           // Much darker base to contrast the bright cracks
+        emissive: 0x000000,        // No surface emission at all
+        emissiveIntensity: 0.0,    
+        roughness: 0.9,            
         metalness: 0.1,
-        bumpMap: frostNormal,      // Apply physical crystalline texture
-        bumpScale: 0.08,           
+        bumpMap: frostNormal,      
+        bumpScale: 0.1,           
         transparent: false,        
         opacity: 1.0               
     });
@@ -166,8 +166,8 @@ function createBeveledIgloo() {
         for (let i = 0; i < numBlocks; i++) {
             const phi = i * angleStep + stagger;
             if (theta < 0.6 && (phi < 0.4 || phi > Math.PI*2 - 0.4)) continue;
-            // Blocks are WIDER than the step to overlap slightly, but leave gaps
-            const bw = (circ / numBlocks) * 0.95; 
+            // Micro-gaps: 0.995 instead of 0.95
+            const bw = (circ / numBlocks) * 0.995; 
             addDomeBlock(bw, blockH, blockD, domeRadius, phi, theta);
         }
     }
@@ -182,8 +182,8 @@ function createBeveledIgloo() {
             const x = Math.cos(archAngle) * tWidth;
             const y = Math.sin(archAngle) * tHeight;
             const staggerY = (i % 2 === 0) ? 0 : 0.05;
-            // Shrunk to leave gaps (1.0 instead of 1.2)
-            addBlock(1.0, 0.6, 0.6, { x: x, y: y + staggerY, z: zDist }, { x: 0, y: 0, z: archAngle - Math.PI/2 });
+            // Tight gaps
+            addBlock(1.15, 0.65, 0.65, { x: x, y: y + staggerY, z: zDist }, { x: 0, y: 0, z: archAngle - Math.PI/2 });
         }
     }
 
@@ -201,23 +201,13 @@ function createBeveledIgloo() {
         }
     }
 
-    // Intense internal pulsing fire (Shines through gaps)
-    const campfire = new THREE.PointLight(0x66ccff, 150.0, 20);
-    campfire.position.set(0, 1.0, 0.5);
+    // Intense internal pulsing fire (Pure HDR light for crack-lighting)
+    const campfire = new THREE.PointLight(0x00ccff, 300.0, 15);
+    campfire.position.set(0, 1.2, 0.5);
     iglooGroup.add(campfire);
     iglooGroup.userData.campfire = campfire;
 
-    // Volumetric glow inside the dome
-    const glowTex = createGlowTexture();
-    const glowMat = new THREE.SpriteMaterial({ 
-        map: glowTex, transparent: true, opacity: 0.9, 
-        blending: THREE.AdditiveBlending, depthWrite: false 
-    });
-    const spill = new THREE.Sprite(glowMat);
-    spill.position.set(0, 1.5, 0); // Moved INSIDE the dome
-    spill.scale.set(6, 6, 6);      // Scaled to fit inside the dome
-    iglooGroup.add(spill);
-    iglooGroup.userData.spill = spill;
+    // REMOVED volumetric sprite to stop blowout
 
     introScene.add(iglooGroup);
 
@@ -370,7 +360,7 @@ function introAnimate() {
     }
 
     if (iglooGroup && iglooGroup.userData.campfire) {
-        iglooGroup.userData.campfire.intensity = 100 + Math.sin(t * 8) * 50;
+        iglooGroup.userData.campfire.intensity = 200 + Math.sin(t * 10) * 100;
     }
 
     introComposer.render();
