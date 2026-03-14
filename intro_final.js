@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 // --- Global Noise Helpers (Function declarations for safe hoisting) ---
 function noise(x, y) {
@@ -144,12 +148,19 @@ function createBeveledIgloo() {
     
     const iceBlockMat = new THREE.MeshStandardMaterial({
         color: 0xe0f5ff,           
+        emissive: 0x0066ff,
+        emissiveIntensity: 0.0,    // Controlled by hover
         roughness: 0.8,            
-        metalness: 0.2,           
-        transparent: false
+        metalness: 0.3,           
+        normalMap: normalMap,      
+        normalScale: new THREE.Vector2(0.5, 0.5),
+        roughnessMap: roughnessMap, 
+        transparent: false,
+        opacity: 1.0
     });
 
-    const geo = new THREE.BoxGeometry(1, 1, 1);
+    const bevelRadius = 0.08;
+    const geo = new RoundedBoxGeometry(1, 1, 1, 3, bevelRadius);
 
     const addBlock = (w, h, d, pos, rot) => {
         const mesh = new THREE.Mesh(geo, iceBlockMat);
@@ -303,39 +314,6 @@ function createSnowPine(x, y, z, s) {
     introScene.add(group);
 }
 
-function createLightBeams() {
-    const beamGeo = new THREE.PlaneGeometry(1, 10);
-    const beamTex = createBeamTexture();
-    const beamMat = new THREE.MeshBasicMaterial({ 
-        map: beamTex, transparent: true, opacity: 0.2, 
-        blending: THREE.AdditiveBlending, side: THREE.DoubleSide, 
-        depthWrite: false 
-    });
-
-    const beamCount = 12;
-    for(let i=0; i<beamCount; i++) {
-        const beam = new THREE.Mesh(beamGeo, beamMat);
-        const phi = Math.random() * Math.PI * 2;
-        const theta = (Math.random() * 0.5) * Math.PI;
-        const r = 4.2;
-        beam.position.set(r * Math.sin(theta) * Math.cos(phi), r * Math.sin(theta) * Math.sin(phi), r * Math.cos(theta));
-        beam.lookAt(0,0,0);
-        beam.rotateX(Math.PI/2);
-        iglooGroup.add(beam);
-    }
-}
-
-function createBeamTexture() {
-    const c = document.createElement("canvas");
-    c.width = 128; c.height = 512;
-    const ctx = c.getContext("2d");
-    const g = ctx.createLinearGradient(0, 0, 0, 512);
-    g.addColorStop(0, "rgba(0, 150, 255, 0.8)");
-    g.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, 128, 512);
-    return new THREE.CanvasTexture(c);
-}
 
 function initIglooInteraction() {
     const raycaster = new THREE.Raycaster();
@@ -609,7 +587,28 @@ function introAnimate() {
         pa.needsUpdate = true;
     }
 
-    if (introRenderer && introScene && introCamera) {
+    if (iglooGroup && iglooGroup.userData.campfire) {
+        // Complex flickering (noise-like)
+        const flicker = noise(t * 15, 0) * 150;
+        iglooGroup.userData.campfire.intensity = 300 + flicker;
+    }
+
+    // Update Smoke
+    if (iglooGroup && iglooGroup.userData.smoke) {
+        iglooGroup.userData.smoke.children.forEach((p, i) => {
+            p.position.y += 0.05;
+            p.position.x = Math.sin(t + p.userData.offset) * 0.5;
+            p.material.opacity -= 0.005;
+            if(p.material.opacity <= 0) {
+                p.position.y = 7.5;
+                p.material.opacity = 0.3;
+            }
+        });
+    }
+
+    if (introComposer) {
+        introComposer.render();
+    } else if (introRenderer && introScene && introCamera) {
         introRenderer.render(introScene, introCamera);
     }
 }
