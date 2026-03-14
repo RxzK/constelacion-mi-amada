@@ -233,6 +233,12 @@ function createBeveledIgloo() {
     // 5. VOLUMETRIC GOD-RAYS
     createLightBeams();
 
+    // 6. CHIMNEY SMOKE
+    createChimneySmoke();
+
+    // 7. GROUND SPECULAR DISC
+    createGroundSpecular();
+
     introScene.add(iglooGroup);
 
     // Re-init Interaction
@@ -310,6 +316,7 @@ function initIglooInteraction() {
     const mouse = new THREE.Vector2();
     let isOpened = false;
     let expansionFactor = { value: 0 };
+    let targetRotation = new THREE.Euler(0, 0, 0);
 
     window.addEventListener('mousemove', (e) => {
         if (isOpened) return;
@@ -321,24 +328,34 @@ function initIglooInteraction() {
         
         if (intersects.length > 0) {
             document.body.style.cursor = 'pointer';
-            // Subtle "breathing" expansion on hover
+            
+            // 1. Subtle opening (max 0.25 for 1:1 look)
             gsap.to(expansionFactor, { 
-                value: 0.4, 
+                value: 0.25, 
                 duration: 0.8, 
                 ease: "power2.out",
-                onUpdate: () => updateBlockExpansion(expansionFactor.value)
+                onUpdate: () => updateInteractiveEffects(expansionFactor.value)
             });
-            gsap.to(iglooGroup.rotation, { y: mouse.x * 0.15, duration: 1.0 });
+
+            // 2. Tilt-toward-mouse (Subtle cinematic lean)
+            targetRotation.set(-mouse.y * 0.1, mouse.x * 0.2, 0);
+            gsap.to(iglooGroup.rotation, { 
+                x: targetRotation.x, 
+                y: targetRotation.y, 
+                z: targetRotation.z, 
+                duration: 1.2, 
+                ease: "power2.out" 
+            });
         } else {
             document.body.style.cursor = 'default';
-            // Smoothly return to original masonry shape
+            // 3. Smooth return to masonry perfect form
             gsap.to(expansionFactor, { 
                 value: 0.0, 
-                duration: 1.0, 
-                ease: "elastic.out(1, 0.75)",
-                onUpdate: () => updateBlockExpansion(expansionFactor.value)
+                duration: 1.2, 
+                ease: "elastic.out(1, 0.8)",
+                onUpdate: () => updateInteractiveEffects(expansionFactor.value)
             });
-            gsap.to(iglooGroup.rotation, { y: 0, duration: 1.5 });
+            gsap.to(iglooGroup.rotation, { x: 0, y: 0, z: 0, duration: 2.0, ease: "power2.out" });
         }
     });
 
@@ -350,13 +367,15 @@ function initIglooInteraction() {
         if (intersects.length > 0) {
             isOpened = true;
             document.body.style.cursor = 'default';
-            openIglooBlocks();
+            triggerPortalTransition();
         }
     });
 }
 
-function updateBlockExpansion(factor) {
+function updateInteractiveEffects(factor) {
     if (!iglooGroup) return;
+    
+    // Sync Block Expansion
     iglooGroup.children.forEach(child => {
         if (child.isMesh && child.userData.origPos) {
             const dir = child.userData.expandDir;
@@ -364,44 +383,87 @@ function updateBlockExpansion(factor) {
             child.position.y = child.userData.origPos.y + dir.y * factor;
             child.position.z = child.userData.origPos.z + dir.z * factor;
         }
+        
+        // Sync God-Ray Opacity
+        if (child.userData.isBeam) {
+            child.material.opacity = 0.2 + factor * 2.0;
+        }
     });
 }
 
-function openIglooBlocks() {
-    // Final Transition Shatter (More dramatic than hover)
-    iglooGroup.children.forEach((child) => {
-        if (child.isMesh && child.userData.origPos) {
-            const dir = child.userData.expandDir;
-            gsap.to(child.position, {
-                x: child.userData.origPos.x + dir.x * 6,
-                y: child.userData.origPos.y + dir.y * 6,
-                z: child.userData.origPos.z + dir.z * 6,
-                duration: 2.5,
-                ease: "expo.out"
-            });
-            gsap.to(child.rotation, {
-                x: child.rotation.x + (Math.random() - 0.5) * 4,
-                y: child.rotation.y + (Math.random() - 0.5) * 4,
-                duration: 2.5
-            });
-        }
-    });
-
-    // Intensify the fire light to whiteout levels
+function triggerPortalTransition() {
+    // Cinematic Final Enter (No shattering blocks to infinity, just light)
     if (iglooGroup.userData.campfire) {
         gsap.to(iglooGroup.userData.campfire, {
-            intensity: 2000,
-            duration: 2.0,
-            ease: "expo.in"
+            intensity: 5000,
+            duration: 1.2,
+            ease: "power4.in"
         });
     }
 
-    // After animation, trigger the scene transition
+    // Portal Flash
+    gsap.to(introBloom, { strength: 20, duration: 1.5, ease: "power2.in" });
+    
     setTimeout(() => {
         if (window.triggerIntroTransition) {
             window.triggerIntroTransition();
         }
-    }, 2500);
+    }, 1200);
+}
+
+function createChimneySmoke() {
+    const smokeCount = 8;
+    const smokeGeo = new THREE.PlaneGeometry(0.8, 0.8);
+    const smokeMat = new THREE.MeshBasicMaterial({ 
+        color: 0xffffff, transparent: true, opacity: 0.3, 
+        blending: THREE.AdditiveBlending, depthWrite: false 
+    });
+
+    const smokeGroup = new THREE.Group();
+    for(let i=0; i<smokeCount; i++) {
+        const p = new THREE.Mesh(smokeGeo, smokeMat.clone());
+        p.position.set(0, 7.5 + Math.random() * 2, 0);
+        p.userData.offset = Math.random() * 10;
+        smokeGroup.add(p);
+    }
+    iglooGroup.add(smokeGroup);
+    iglooGroup.userData.smoke = smokeGroup;
+}
+
+function createGroundSpecular() {
+    const geo = new THREE.CircleGeometry(12, 32);
+    const mat = new THREE.MeshStandardMaterial({
+        color: 0x88ccff, transparent: true, opacity: 0.1,
+        roughness: 0.05, metalness: 0.8
+    });
+    const disc = new THREE.Mesh(geo, mat);
+    disc.rotation.x = -Math.PI/2;
+    disc.position.y = -2.15;
+    introScene.add(disc);
+}
+
+function createLightBeams() {
+    const beamGeo = new THREE.PlaneGeometry(1, 10);
+    const beamTex = createBeamTexture();
+    
+    const beamCount = 12;
+    for(let i=0; i<beamCount; i++) {
+        const beamMat = new THREE.MeshBasicMaterial({ 
+            map: beamTex, transparent: true, opacity: 0.2, 
+            blending: THREE.AdditiveBlending, side: THREE.DoubleSide, 
+            depthWrite: false 
+        });
+        const beam = new THREE.Mesh(beamGeo, beamMat);
+        beam.userData.isBeam = true; // For sync
+        
+        const phi = Math.random() * Math.PI * 2;
+        const theta = (Math.random() * 0.5) * Math.PI;
+        const r = 4.2;
+        beam.position.set(r * Math.sin(theta) * Math.cos(phi), r * Math.sin(theta) * Math.sin(phi), r * Math.cos(theta));
+        beam.lookAt(0,0,0);
+        beam.rotateX(Math.PI/2);
+        iglooGroup.add(beam);
+    }
 }
 
 function generateIceTextures() {
@@ -549,7 +611,22 @@ function introAnimate() {
     }
 
     if (iglooGroup && iglooGroup.userData.campfire) {
-        iglooGroup.userData.campfire.intensity = 200 + Math.sin(t * 10) * 100;
+        // Complex flickering (noise-like)
+        const flicker = noise(t * 15, 0) * 150;
+        iglooGroup.userData.campfire.intensity = 300 + flicker;
+    }
+
+    // Update Smoke
+    if (iglooGroup && iglooGroup.userData.smoke) {
+        iglooGroup.userData.smoke.children.forEach((p, i) => {
+            p.position.y += 0.05;
+            p.position.x = Math.sin(t + p.userData.offset) * 0.5;
+            p.material.opacity -= 0.005;
+            if(p.material.opacity <= 0) {
+                p.position.y = 7.5;
+                p.material.opacity = 0.3;
+            }
+        });
     }
 
     introComposer.render();
