@@ -34,15 +34,15 @@ window.initIntroScene = function () {
     introCamera.lookAt(0, 2, 0);
 
     /* ---- LIGHTS ---- */
-    const moonLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    const moonLight = new THREE.DirectionalLight(0xffffff, 0.8); // Darker night
     moonLight.position.set(15, 25, 10);
     introScene.add(moonLight);
 
-    const rimLight = new THREE.DirectionalLight(0xaaddff, 1.0);
+    const rimLight = new THREE.DirectionalLight(0xaaddff, 0.6);
     rimLight.position.set(-15, 10, -20);
     introScene.add(rimLight);
 
-    const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+    const ambient = new THREE.AmbientLight(0xffffff, 0.2); // Low ambient
     introScene.add(ambient);
 
     /* ---- BUILDER FUNCTIONS ---- */
@@ -54,9 +54,9 @@ window.initIntroScene = function () {
     const renderScene = new RenderPass(introScene, introCamera);
     introBloom = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
-        1.2, // Strength: Lowered from 1.5 to prevent massive blur
-        0.5, // Radius: Tighter radius for sharper lines
-        0.8  // Threshold: Anything brighter than 0.8 will bloom (like the crack lights)
+        1.2, // Strength
+        0.4, // Sharper radius
+        0.95 // VERY High threshold: ONLY the internal fires bleed through cracks
     );
     introComposer = new EffectComposer(introRenderer);
     introComposer.addPass(renderScene);
@@ -106,14 +106,14 @@ function createBeveledIgloo() {
     
     // Opaque frosty ice material (forces light to ONLY escape through gaps)
     const iceBlockMat = new THREE.MeshStandardMaterial({
-        color: 0xbbeeff,           // Icy base color (slightly more blue to contrast the cracks)
-        emissive: 0x052288,        // Very slight dark blue base glow
-        emissiveIntensity: 0.4,    // Subtle surface glow
-        roughness: 0.7,            // High roughness for frosted look
+        color: 0x88aaff,           // Darker blue for better contrast
+        emissive: 0x011144,        // Nearly zero surface emission
+        emissiveIntensity: 0.1,    
+        roughness: 0.8,            // High roughness for frosted look
         metalness: 0.1,
         bumpMap: frostNormal,      // Apply physical crystalline texture
-        bumpScale: 0.08,           // Stronger texture depth
-        transparent: false,        // CRITICAL: Opaque!
+        bumpScale: 0.08,           
+        transparent: false,        
         opacity: 1.0               
     });
 
@@ -220,6 +220,79 @@ function createBeveledIgloo() {
     iglooGroup.userData.spill = spill;
 
     introScene.add(iglooGroup);
+
+    // Interaction Setup
+    initIglooInteraction();
+}
+
+function initIglooInteraction() {
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let isOpened = false;
+
+    window.addEventListener('mousemove', (e) => {
+        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        
+        raycaster.setFromCamera(mouse, introCamera);
+        const intersects = raycaster.intersectObjects(iglooGroup.children, true);
+        
+        if (intersects.length > 0 && !isOpened) {
+            document.body.style.cursor = 'pointer';
+            gsap.to(iglooGroup.rotation, { y: mouse.x * 0.1, duration: 0.5 });
+        } else {
+            document.body.style.cursor = 'default';
+        }
+    });
+
+    window.addEventListener('click', () => {
+        if (isOpened) return;
+        
+        raycaster.setFromCamera(mouse, introCamera);
+        const intersects = raycaster.intersectObjects(iglooGroup.children, true);
+        
+        if (intersects.length > 0) {
+            isOpened = true;
+            openIglooBlocks();
+        }
+    });
+}
+
+function openIglooBlocks() {
+    // Reveal the giant internal resplandor by moving blocks apart
+    iglooGroup.children.forEach((child) => {
+        if (child.isMesh) {
+            const dir = child.position.clone().normalize();
+            gsap.to(child.position, {
+                x: child.position.x + dir.x * 2,
+                y: child.position.y + dir.y * 2,
+                z: child.position.z + dir.z * 2,
+                duration: 2.0,
+                ease: "power2.out"
+            });
+            gsap.to(child.rotation, {
+                x: child.rotation.x + (Math.random() - 0.5) * 2,
+                y: child.rotation.y + (Math.random() - 0.5) * 2,
+                duration: 2.0
+            });
+        }
+    });
+
+    // Intensify the fire light
+    if (iglooGroup.userData.campfire) {
+        gsap.to(iglooGroup.userData.campfire, {
+            intensity: 800,
+            duration: 1.5,
+            ease: "expo.out"
+        });
+    }
+
+    // After animation, trigger the scene transition
+    setTimeout(() => {
+        if (window.triggerIntroTransition) {
+            window.triggerIntroTransition();
+        }
+    }, 2500);
 }
 
 function createIceNoiseTexture() {
