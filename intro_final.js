@@ -101,117 +101,125 @@ function createBeveledIgloo() {
     iglooGroup = new THREE.Group();
     iglooGroup.position.set(0, -0.1, 0);
 
-    // Generate Frost Noise Texture
     const frostNormal = createIceNoiseTexture();
-    
-    // Opaque frosty ice material (forces light to ONLY escape through gaps)
     const iceBlockMat = new THREE.MeshStandardMaterial({
-        color: 0x446688,           // Much darker base to contrast the bright cracks
-        emissive: 0x000000,        // No surface emission at all
-        emissiveIntensity: 0.0,    
-        roughness: 0.9,            
+        color: 0x223344,           // Even darker base for dramatic contrast
+        emissive: 0x000000,
+        emissiveIntensity: 0.0,
+        roughness: 0.9,
         metalness: 0.1,
-        bumpMap: frostNormal,      
-        bumpScale: 0.1,           
-        transparent: false,        
-        opacity: 1.0               
+        bumpMap: frostNormal,
+        bumpScale: 0.12,           // More pronounced ice texture
+        transparent: false,
+        opacity: 1.0
     });
 
-    const bevelRadius = 0.08; 
-    // Shrink blocks to create micro-fissures for light to escape
-    const blockD = 0.46; // Thinner depth
-    const blockH = 0.55; // Shorter height
-    const domeRadius = 3.6;
-
-    // Shared geometry
+    const bevelRadius = 0.08;
     const geo = new RoundedBoxGeometry(1, 1, 1, 3, bevelRadius);
 
     const addBlock = (w, h, d, pos, rot) => {
         const mesh = new THREE.Mesh(geo, iceBlockMat);
         mesh.scale.set(w, h, d);
         
-        // Organic Jitter ("Hand-built" look)
-        const jRotX = (Math.random() - 0.5) * 0.1;
-        const jRotY = (Math.random() - 0.5) * 0.1;
-        const jRotZ = (Math.random() - 0.5) * 0.1;
-        const jPosX = (Math.random() - 0.5) * 0.06;
-        const jPosY = (Math.random() - 0.5) * 0.04;
-        const jPosZ = (Math.random() - 0.5) * 0.06;
+        // Very subtle jitter for professional handmade feel
+        const jRotX = (Math.random() - 0.5) * 0.02;
+        const jRotY = (Math.random() - 0.5) * 0.02;
+        const jRotZ = (Math.random() - 0.5) * 0.02;
+        const jPosX = (Math.random() - 0.5) * 0.03;
+        const jPosY = (Math.random() - 0.5) * 0.02;
+        const jPosZ = (Math.random() - 0.5) * 0.03;
         
         mesh.position.set(pos.x + jPosX, pos.y + jPosY, pos.z + jPosZ);
         mesh.rotation.set(rot.x + jRotX, rot.y + jRotY, rot.z + jRotZ);
         iglooGroup.add(mesh);
+        return mesh;
     };
 
-    const addDomeBlock = (w, h, d, radius, phi, theta) => {
-        const cp = Math.cos(phi), sp = Math.sin(phi);
-        const ct = Math.cos(theta), st = Math.sin(theta);
-        const px = radius * ct * sp;
-        const py = radius * st;
-        const pz = radius * ct * cp;
-        addBlock(w, h, d, { x: px, y: py, z: pz }, { x: -theta, y: phi, z: 0 });
-    };
+    const domeRadius = 4.2;
+    const blockH = 0.65;
+    const blockD = 0.6;
 
-    // 1. DOME
-    const rows = 11;
+    // 1. BASE RING (Solid grounding, slightly larger)
+    const baseCount = 22;
+    for(let i=0; i<baseCount; i++) {
+        const phi = (i/baseCount) * Math.PI * 2;
+        // Skip entrance area for tunnel
+        if (phi < 0.35 || phi > Math.PI*2 - 0.35) continue;
+        const px = Math.cos(phi) * domeRadius;
+        const pz = Math.sin(phi) * domeRadius;
+        addBlock(1.5, 0.8, 0.8, {x: px, y: 0.3, z: pz}, {x: 0, y: -phi + Math.PI/2, z: 0});
+    }
+
+    // 2. STAGGERED DOME
+    const rows = 12;
     for (let r = 0; r < rows; r++) {
         const theta = (r / rows) * (Math.PI / 2);
-        if (theta > (Math.PI/2) * 0.9) continue; 
+        if (theta > (Math.PI/2) * 0.95) continue; 
+        
         const radiusAtTheta = domeRadius * Math.cos(theta);
+        const y = domeRadius * Math.sin(theta);
+        
         const circ = 2 * Math.PI * radiusAtTheta;
-        // Use max blocks, no gaps. We want them to overlap.
-        const numBlocks = Math.max(1, Math.floor(circ / 1.4)); 
+        const numBlocks = Math.max(1, Math.floor(circ / 1.15)); 
         const angleStep = (Math.PI * 2) / numBlocks;
+        
+        // Offset every other row by half a block (Running Bond)
         const stagger = (r % 2 === 0) ? 0 : angleStep / 2;
+        
         for (let i = 0; i < numBlocks; i++) {
             const phi = i * angleStep + stagger;
-            if (theta < 0.6 && (phi < 0.4 || phi > Math.PI*2 - 0.4)) continue;
-            // Micro-gaps: 0.995 instead of 0.95
-            const bw = (circ / numBlocks) * 0.995; 
-            addDomeBlock(bw, blockH, blockD, domeRadius, phi, theta);
+            
+            // Skip blocks where tunnel will be
+            if (theta < 0.65 && (phi < 0.5 || phi > Math.PI*2 - 0.5)) continue;
+
+            const px = radiusAtTheta * Math.sin(phi);
+            const pz = radiusAtTheta * Math.cos(phi);
+            const py = y;
+
+            const bw = (circ / numBlocks) * 0.992; // Micro-gaps for sharp crack-glow
+            addBlock(bw, blockH, blockD, {x: px, y: py, z: pz}, {x: -theta, y: phi, z: 0});
         }
     }
 
-    // 2. TUNNEL
-    const tWidth = 1.3, tHeight = 1.6, tArches = 6;
+    // 3. ARCHED INTEGRATED TUNNEL
+    const tWidth = 1.8, tHeight = 2.0, tArches = 8;
     for (let i = 0; i < tArches; i++) {
-        const zDist = domeRadius - 0.5 + (i * 0.6);
-        const numArchBlocks = 7;
-        for (let j = 0; j < numArchBlocks; j++) {
-            const archAngle = (j / (numArchBlocks - 1)) * Math.PI;
+        const zDist = (domeRadius - 0.5) + (i * 0.7);
+        const archRes = 8;
+        for (let j = 0; j < archRes; j++) {
+            const archAngle = (j / (archRes - 1)) * Math.PI;
             const x = Math.cos(archAngle) * tWidth;
             const y = Math.sin(archAngle) * tHeight;
-            const staggerY = (i % 2 === 0) ? 0 : 0.05;
-            // Tight gaps
-            addBlock(1.15, 0.65, 0.65, { x: x, y: y + staggerY, z: zDist }, { x: 0, y: 0, z: archAngle - Math.PI/2 });
+            
+            // Arch gets slightly smaller/tapered
+            const tScale = 1.0 - (i * 0.04);
+            addBlock(1.3 * tScale, 0.7 * tScale, 0.7 * tScale, 
+                { x: x * tScale, y: y * tScale, z: zDist }, 
+                { x: 0, y: 0, z: archAngle - Math.PI/2 }
+            );
         }
     }
 
-    // 3. CHIMNEY
-    const chimneyRadius = 0.8;
-    for (let r = 0; r < 2; r++) {
-        const cY = domeRadius - 0.2 + (r * 0.5);
-        const numCBlocks = 6;
-        for (let i = 0; i < numCBlocks; i++) {
-            const phi = (i / numCBlocks) * Math.PI * 2 + (r * 0.3);
-            const cx = Math.cos(phi) * chimneyRadius;
-            const cz = Math.sin(phi) * chimneyRadius;
-            // Shrunk blocks
-            addBlock(0.9, 0.5, 0.5, { x: cx, y: cY, z: cz }, { x: 0, y: -phi + Math.PI/2, z: 0 });
-        }
+    // 4. DEFINED CHIMNEY
+    const chimneyY = domeRadius * 0.96;
+    const cRadius = 0.9;
+    const cCount = 6;
+    for(let i=0; i<cCount; i++) {
+        const phi = (i/cCount) * Math.PI * 2;
+        const cx = Math.cos(phi) * cRadius;
+        const cz = Math.sin(phi) * cRadius;
+        addBlock(1.1, 0.9, 0.6, {x: cx, y: chimneyY + 0.6, z: cz}, {x: 0, y: -phi + Math.PI/2, z: 0});
     }
 
-    // Intense internal pulsing fire (Pure HDR light for crack-lighting)
-    const campfire = new THREE.PointLight(0x00ccff, 300.0, 15);
-    campfire.position.set(0, 1.2, 0.5);
+    // Internal HDR Light
+    const campfire = new THREE.PointLight(0x00ccff, 350.0, 18);
+    campfire.position.set(0, 1.3, 0.5);
     iglooGroup.add(campfire);
     iglooGroup.userData.campfire = campfire;
 
-    // REMOVED volumetric sprite to stop blowout
-
     introScene.add(iglooGroup);
 
-    // Interaction Setup
+    // Re-init Interaction
     initIglooInteraction();
 }
 
