@@ -38,69 +38,82 @@ let introActive = true;
 const introClock = { t: 0 };
 
 window.initIntroScene = function () {
-    const canvas = document.getElementById("intro-canvas");
-    if (!canvas) return;
+    try {
+        const canvas = document.getElementById("intro-canvas");
+        if (!canvas) return;
 
-    introActive = true;
+        // Visual debug indicator (will be hidden if scene renders)
+        const debugInfo = document.createElement('div');
+        debugInfo.id = 'scene-debug';
+        debugInfo.style.cssText = 'position:fixed;top:10;left:10;color:red;z-index:9999;font-family:monospace;pointer-events:none;';
+        document.body.appendChild(debugInfo);
 
-    /* ---- RENDERER ---- */
-    introRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
-    introRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    introRenderer.setSize(canvas.clientWidth, canvas.clientHeight);
-    introRenderer.toneMapping = THREE.ACESFilmicToneMapping;
-    introRenderer.toneMappingExposure = 1.0;
+        introActive = true;
 
-    /* ---- SCENE ---- */
-    introScene = new THREE.Scene();
-    introScene.background = new THREE.Color(0x010a15); // Dark deep blue to avoid background bloom
-    introScene.fog = new THREE.FogExp2(0x010a15, 0.015); // Match background, subtle density
+        /* ---- RENDERER ---- */
+        introRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+        introRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        introRenderer.setSize(canvas.clientWidth, canvas.clientHeight);
+        introRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+        introRenderer.toneMappingExposure = 1.0;
 
-    /* ---- CAMERA ---- */
-    introCamera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 500);
-    introCamera.position.set(0, 4, 18);
-    introCamera.lookAt(0, 2, 0);
+        /* ---- SCENE ---- */
+        introScene = new THREE.Scene();
+        introScene.background = new THREE.Color(0x010a15);
+        introScene.fog = new THREE.FogExp2(0x010a15, 0.015);
 
-    /* ---- LIGHTS ---- */
-    const moonLight = new THREE.DirectionalLight(0xffffff, 0.4); // Even darker to let the ice glow dominate
-    moonLight.position.set(15, 25, -10); // Back-lighting
-    introScene.add(moonLight);
+        /* ---- CAMERA ---- */
+        introCamera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 500);
+        introCamera.position.set(0, 4, 18);
+        introCamera.lookAt(0, 2, 0);
 
-    const rimLight = new THREE.DirectionalLight(0xaaddff, 0.5);
-    rimLight.position.set(-15, 10, -20);
-    introScene.add(rimLight);
+        /* ---- LIGHTS ---- */
+        const moonLight = new THREE.DirectionalLight(0xffffff, 0.4);
+        moonLight.position.set(15, 25, -10);
+        introScene.add(moonLight);
 
-    const ambient = new THREE.AmbientLight(0x050a15, 0.2); 
-    introScene.add(ambient);
+        const rimLight = new THREE.DirectionalLight(0xaaddff, 0.5);
+        rimLight.position.set(-15, 10, -20);
+        introScene.add(rimLight);
 
-    /* ---- BUILDER FUNCTIONS ---- */
-    createCinematicTerrain();
-    createPremiumSnow();
-    createEnvironment(); // New framing elements
-    createBeveledIgloo();
+        const ambient = new THREE.AmbientLight(0x050a15, 0.2); 
+        introScene.add(ambient);
 
-    /* ---- POST-PROCESSING ---- */
-    const renderScene = new RenderPass(introScene, introCamera);
-    introBloom = new UnrealBloomPass(
-        new THREE.Vector2(window.innerWidth, window.innerHeight),
-        0.8, // Lower strength
-        0.3, // Very tight radius for sharp lines
-        1.0  // Absolute threshold: only HDR values bloom
-    );
-    introComposer = new EffectComposer(introRenderer);
-    introComposer.addPass(renderScene);
-    introComposer.addPass(introBloom);
+        /* ---- BUILDER ---- */
+        createCinematicTerrain();
+        createPremiumSnow();
+        createEnvironment(); 
+        createBeveledIgloo();
 
-    /* ---- RESIZE ---- */
-    window.addEventListener("resize", () => {
-        if (!introActive) return;
-        const w = canvas.clientWidth, h = canvas.clientHeight;
-        introCamera.aspect = w / h;
-        introCamera.updateProjectionMatrix();
-        introRenderer.setSize(w, h);
-        introComposer.setSize(w, h);
-    });
+        /* ---- POST-PROCESSING ---- */
+        const renderScene = new RenderPass(introScene, introCamera);
+        introComposer = new EffectComposer(introRenderer);
+        introComposer.addPass(renderScene);
 
-    introAnimate();
+        // Optional Bloom (Disabled temporarily to test black screen)
+        /*
+        introBloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.8, 0.3, 1.0);
+        introComposer.addPass(introBloom);
+        */
+
+        window.addEventListener("resize", () => {
+            if (!introActive) return;
+            const w = canvas.clientWidth, h = canvas.clientHeight;
+            introCamera.aspect = w / h;
+            introCamera.updateProjectionMatrix();
+            introRenderer.setSize(w, h);
+            introComposer.setSize(w, h);
+        });
+
+        // If we got here, hide debug
+        debugInfo.style.display = 'none';
+        introAnimate();
+
+    } catch (e) {
+        console.error("Intro Scene Crash:", e);
+        const errDiv = document.getElementById('scene-debug');
+        if (errDiv) errDiv.textContent = "Error: " + e.message;
+    }
 };
 
 function createCinematicTerrain() {
@@ -492,7 +505,7 @@ function createLightBeams() {
 
 
 function generateIceTextures() {
-    const size = 512;
+    const size = 128; // Reduced for GPU safety
     const canvas = document.createElement("canvas");
     canvas.width = size; canvas.height = size;
     const ctx = canvas.getContext("2d");
@@ -501,7 +514,7 @@ function generateIceTextures() {
     const heightData = new Uint8Array(size * size);
     for(let y=0; y<size; y++) {
         for(let x=0; x<size; x++) {
-            const val = fbm(x * 0.02, y * 0.02) * 255;
+            const val = fbm(x * 0.08, y * 0.08) * 255;
             heightData[y * size + x] = val;
         }
     }
@@ -625,7 +638,11 @@ function introAnimate() {
         });
     }
 
-    introComposer.render();
+    if (introComposer) {
+        introComposer.render();
+    } else if (introRenderer && introScene && introCamera) {
+        introRenderer.render(introScene, introCamera);
+    }
 }
 
 window.triggerIntroTransition = function(callback) {
