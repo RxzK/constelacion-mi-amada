@@ -101,15 +101,18 @@ function createBeveledIgloo() {
     iglooGroup = new THREE.Group();
     iglooGroup.position.set(0, -0.1, 0);
 
-    const frostNormal = createIceNoiseTexture();
+    // 1. ADVANCED ICE TEXTURES
+    const { normalMap, roughnessMap } = generateIceTextures();
+    
     const iceBlockMat = new THREE.MeshStandardMaterial({
-        color: 0x223344,           // Even darker base for dramatic contrast
+        color: 0xe0f5ff,           // Brighter, cleaner ice base
         emissive: 0x000000,
         emissiveIntensity: 0.0,
-        roughness: 0.9,
-        metalness: 0.1,
-        bumpMap: frostNormal,
-        bumpScale: 0.12,           // More pronounced ice texture
+        roughness: 0.9,            
+        metalness: 0.15,           
+        normalMap: normalMap,      // Sharp surface detail
+        normalScale: new THREE.Vector2(0.8, 0.8),
+        roughnessMap: roughnessMap, // Frosty vs Shiny patches
         transparent: false,
         opacity: 1.0
     });
@@ -293,28 +296,98 @@ function openIglooBlocks() {
     }, 2500);
 }
 
-function createIceNoiseTexture() {
+function generateIceTextures() {
     const size = 512;
     const canvas = document.createElement("canvas");
     canvas.width = size; canvas.height = size;
     const ctx = canvas.getContext("2d");
-    const imgData = ctx.createImageData(size, size);
-    
-    // Simple white noise for bump
-    for (let i = 0; i < imgData.data.length; i += 4) {
-        const val = Math.random() * 255;
-        imgData.data[i] = val;
-        imgData.data[i+1] = val;
-        imgData.data[i+2] = 255; // Normal map Z is full
-        imgData.data[i+3] = 255;
+
+    // Helper: Simple Noise (2D)
+    const noise = (x, y) => {
+        const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+        return n - Math.floor(n);
+    };
+
+    // Helper: Smooth Noise
+    const smoothNoise = (x, y) => {
+        const xf = x % 1, yf = y % 1;
+        const xi = Math.floor(x), yi = Math.floor(y);
+        const a = noise(xi, yi);
+        const b = noise(xi + 1, yi);
+        const c = noise(xi, yi + 1);
+        const d = noise(xi + 1, yi + 1);
+        const ux = xf * xf * (3 - 2 * xf);
+        const uy = yf * yf * (3 - 2 * yf);
+        return a * (1-ux) * (1-uy) + b * ux * (1-uy) + c * (1-ux) * uy + d * ux * uy;
+    };
+
+    // Helper: FBM (Fractional Brownian Motion)
+    const fbm = (x, y, octaves = 6) => {
+        let val = 0, amp = 0.5, freq = 1;
+        for(let i=0; i<octaves; i++) {
+            val += smoothNoise(x * freq, y * freq) * amp;
+            freq *= 2.1; amp *= 0.5;
+        }
+        return val;
+    };
+
+    // 1. HEIGHT MAP (Grayscale)
+    const heightData = new Uint8Array(size * size);
+    for(let y=0; y<size; y++) {
+        for(let x=0; x<size; x++) {
+            const val = fbm(x * 0.02, y * 0.02) * 255;
+            heightData[y * size + x] = val;
+        }
     }
-    ctx.putImageData(imgData, 0, 0);
-    
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(4, 2);
-    return tex;
+
+    // 2. NORMAL MAP (Calculated from Height)
+    const normalCanvas = document.createElement("canvas");
+    normalCanvas.width = size; normalCanvas.height = size;
+    const nCtx = normalCanvas.getContext("2d");
+    const nImg = nCtx.createImageData(size, size);
+    for(let y=0; y<size; y++) {
+        for(let x=0; x<size; x++) {
+            const idx = (y * size + x);
+            const r = heightData[((y) * size + (x + 1)) % (size * size)] || heightData[idx];
+            const l = heightData[((y) * size + (x - 1 + size)) % (size * size)] || heightData[idx];
+            const d = heightData[((y + 1) * size + (x)) % (size * size)] || heightData[idx];
+            const u = heightData[((y - 1 + size) * size + (x)) % (size * size)] || heightData[idx];
+            
+            const dx = (r - l) / 255.0;
+            const dy = (d - u) / 255.0;
+            const nx = -dx, ny = -dy, nz = 0.2; // Normalize scale
+            const mag = Math.sqrt(nx*nx + ny*ny + nz*nz);
+            
+            const pixelIdx = idx * 4;
+            nImg.data[pixelIdx] = (nx/mag * 0.5 + 0.5) * 255;
+            nImg.data[pixelIdx+1] = (ny/mag * 0.5 + 0.5) * 255;
+            nImg.data[pixelIdx+2] = (nz/mag * 0.5 + 0.5) * 255;
+            nImg.data[pixelIdx+3] = 255;
+        }
+    }
+    nCtx.putImageData(nImg, 0, 0);
+    const nTex = new THREE.CanvasTexture(normalCanvas);
+    nTex.wrapS = nTex.wrapT = THREE.RepeatWrapping;
+
+    // 3. ROUGHNESS MAP (Based on Height)
+    const roughCanvas = document.createElement("canvas");
+    roughCanvas.width = size; roughCanvas.height = size;
+    const rCtx = roughCanvas.getContext("2d");
+    const rImg = rCtx.createImageData(size, size);
+    for(let i=0; i<heightData.length; i++) {
+        const v = heightData[i];
+        // Frosty bits are rough (white), shiny bits are smooth (dark)
+        const rough = v < 128 ? v * 0.5 : v; 
+        rImg.data[i*4] = rough;
+        rImg.data[i*4+1] = rough;
+        rImg.data[i*4+2] = rough;
+        rImg.data[i*4+3] = 255;
+    }
+    rCtx.putImageData(rImg, 0, 0);
+    const rTex = new THREE.CanvasTexture(roughCanvas);
+    rTex.wrapS = rTex.wrapT = THREE.RepeatWrapping;
+
+    return { normalMap: nTex, roughnessMap: rTex };
 }
 
 function createGlowTexture() {
