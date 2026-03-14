@@ -4,6 +4,33 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
+// --- Global Noise Helpers (Defined at top to avoid Temporal Dead Zone) ---
+const noise = (x, y) => {
+    const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+    return n - Math.floor(n);
+};
+
+const smoothNoise = (x, y) => {
+    const xf = x % 1, yf = y % 1;
+    const xi = Math.floor(x), yi = Math.floor(y);
+    const a = noise(xi, yi);
+    const b = noise(xi + 1, yi);
+    const c = noise(xi, yi + 1);
+    const d = noise(xi + 1, yi + 1);
+    const ux = xf * xf * (3 - 2 * xf);
+    const uy = yf * yf * (3 - 2 * yf);
+    return a * (1-ux) * (1-uy) + b * ux * (1-uy) + c * (1-ux) * uy + d * ux * uy;
+};
+
+const fbm = (x, y, octaves = 6) => {
+    let val = 0, amp = 0.5, freq = 1;
+    for(let i=0; i<octaves; i++) {
+        val += smoothNoise(x * freq, y * freq) * amp;
+        freq *= 2.1; amp *= 0.5;
+    }
+    return val;
+};
+
 let introRenderer, introScene, introCamera, introComposer, introBloom;
 let snowParticles, iglooGroup;
 let introAnimId;
@@ -466,40 +493,13 @@ function createLightBeams() {
     }
 }
 
+
+
 function generateIceTextures() {
     const size = 512;
     const canvas = document.createElement("canvas");
     canvas.width = size; canvas.height = size;
     const ctx = canvas.getContext("2d");
-
-    // Helper: Simple Noise (2D)
-    const noise = (x, y) => {
-        const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
-        return n - Math.floor(n);
-    };
-
-    // Helper: Smooth Noise
-    const smoothNoise = (x, y) => {
-        const xf = x % 1, yf = y % 1;
-        const xi = Math.floor(x), yi = Math.floor(y);
-        const a = noise(xi, yi);
-        const b = noise(xi + 1, yi);
-        const c = noise(xi, yi + 1);
-        const d = noise(xi + 1, yi + 1);
-        const ux = xf * xf * (3 - 2 * xf);
-        const uy = yf * yf * (3 - 2 * yf);
-        return a * (1-ux) * (1-uy) + b * ux * (1-uy) + c * (1-ux) * uy + d * ux * uy;
-    };
-
-    // Helper: FBM (Fractional Brownian Motion)
-    const fbm = (x, y, octaves = 6) => {
-        let val = 0, amp = 0.5, freq = 1;
-        for(let i=0; i<octaves; i++) {
-            val += smoothNoise(x * freq, y * freq) * amp;
-            freq *= 2.1; amp *= 0.5;
-        }
-        return val;
-    };
 
     // 1. HEIGHT MAP (Grayscale)
     const heightData = new Uint8Array(size * size);
