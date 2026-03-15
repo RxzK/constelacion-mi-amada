@@ -62,11 +62,9 @@ window.initIntroScene = function () {
         // 2. SCENE & CAMERA
         introScene = new THREE.Scene();
         introScene.background = new THREE.Color(0x020815);
-        introScene.fog = new THREE.Fog(0x020815, 10, 300);
-
-        introCamera = new THREE.PerspectiveCamera(40, canvas.clientWidth / canvas.clientHeight, 0.1, 500);
-        introCamera.position.set(0, 6, 22);
-        introCamera.lookAt(0, 2, 0);
+        introCamera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+        introCamera.position.set(0, 0, 50);
+        introCamera.lookAt(0, 0, -100);
 
         // 3. LIGHTS
         const moon = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -80,7 +78,6 @@ window.initIntroScene = function () {
         introScene.add(new THREE.AmbientLight(0x223355, 0.4));
 
         // 4. OBJECTS
-        createCinematicTerrain();
         createPremiumSnow();
         createAurora();
         createCustomConstellation();
@@ -109,70 +106,7 @@ window.initIntroScene = function () {
     }
 };
 
-function createCinematicTerrain() {
-    const geo = new THREE.PlaneGeometry(600, 600, 120, 120);
-    geo.rotateX(-Math.PI / 2);
-    const pos = geo.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-        const x = pos.getX(i), z = pos.getZ(i);
-        let y = fbm(x * 0.015, z * 0.015, 5) * 15;
-        const d = Math.sqrt(x * x + z * z);
-        if (d < 40) y *= (d / 40);
-        pos.setY(i, y - 8);
-    }
-    geo.computeVertexNormals();
-
-    // Procedural Snow Texture
-    const size = 256;
-    const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = size;
-    const ctx = canvas.getContext("2d");
-    for (let i = 0; i < size * size; i++) {
-        const val = 200 + Math.random() * 55;
-        ctx.fillStyle = `rgb(${val},${val},${val})`;
-        ctx.fillRect(i % size, Math.floor(i / size), 1, 1);
-    }
-    const snowTex = new THREE.CanvasTexture(canvas);
-    snowTex.wrapS = snowTex.wrapT = THREE.RepeatWrapping;
-    snowTex.repeat.set(50, 50);
-
-    const mat = new THREE.MeshStandardMaterial({ 
-        color: 0xffffff, 
-        roughness: 0.8, 
-        metalness: 0.1,
-        map: snowTex,
-        roughnessMap: snowTex,
-        emissive: 0x112244, 
-        emissiveIntensity: 0.15 
-    });
-
-    const terrain = new THREE.Mesh(geo, mat);
-    introScene.add(terrain);
-    
-    // Add procedural sparkles
-    const sparkleCount = 4000;
-    const sGeo = new THREE.BufferGeometry();
-    const sPos = new Float32Array(sparkleCount * 3);
-    for (let i = 0; i < sparkleCount; i++) {
-        const rx = (Math.random() - 0.5) * 500;
-        const rz = (Math.random() - 0.5) * 500;
-        sPos[i * 3] = rx;
-        sPos[i * 3 + 1] = fbm(rx * 0.015, rz * 0.015, 5) * 15 - 7.9; // Slightly above ground
-        sPos[i * 3 + 2] = rz;
-    }
-    sGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
-    const sMat = new THREE.PointsMaterial({ 
-        size: 0.15, 
-        color: 0xffffff, 
-        transparent: true, 
-        opacity: 0.8, 
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
-    });
-    const sparkles = new THREE.Points(sGeo, sMat);
-    introScene.add(sparkles);
-    terrain.userData.sparkles = sparkles;
-}
+// Simplified Sky View
 
 let auroraBands = [];
 function createAurora() {
@@ -314,12 +248,12 @@ function triggerTransition() {
 function introAnimate() {
     if (!introActive) return;
     introAnimId = requestAnimationFrame(introAnimate);
-    const t = (introClock.t += 0.012); 
+    const t = (introClock.t += 0.01); 
     
-    // Smooth camera orbit
-    const camRadius = 30 + Math.sin(t * 0.2) * 2;
-    introCamera.position.set(Math.sin(t * 0.03) * camRadius, 8 + Math.sin(t * 0.1), Math.cos(t * 0.03) * camRadius);
-    introCamera.lookAt(0, 4, -40);
+    // Slow cinematic drift looking into the void
+    introCamera.position.x = Math.sin(t * 0.1) * 5;
+    introCamera.position.y = Math.cos(t * 0.1) * 5;
+    introCamera.lookAt(0, 0, -100);
 
     // Animate Aurora
     auroraBands.forEach((band, b) => {
@@ -328,25 +262,18 @@ function introAnimate() {
             const x = pos.getX(i);
             const z = pos.getZ(i);
             const phase = band.userData.phases[i];
-            const wave = Math.sin(t * 0.4 + x * 0.04 + phase * 0.1) * 6;
+            const wave = Math.sin(t * 0.3 + x * 0.03 + phase * 0.1) * 8;
             pos.setY(i, wave);
         }
         pos.needsUpdate = true;
-        band.material.opacity = 0.08 + Math.sin(t * 0.3 + b) * 0.04;
-    });
-
-    // Twinkling Sparkles
-    introScene.traverse(obj => {
-        if (obj.userData && obj.userData.sparkles) {
-            obj.userData.sparkles.material.opacity = 0.6 + Math.sin(t * 5) * 0.4;
-        }
+        band.material.opacity = 0.06 + Math.sin(t * 0.2 + b) * 0.03;
     });
 
     if (snowParticles) {
         const pa = snowParticles.geometry.attributes.position;
         for (let i = 0; i < pa.count; i++) {
-            let py = pa.getY(i) - 0.08;
-            pa.setY(i, py < -5 ? 60 : py);
+            let pz = pa.getZ(i) + 0.2;
+            pa.setZ(i, pz > 300 ? -300 : pz);
         }
         pa.needsUpdate = true;
     }
@@ -362,11 +289,13 @@ window.triggerIntroTransition = function (callback) {
 };
 
 function createPremiumSnow() {
-    const count = 7000, geo = new THREE.BufferGeometry(), pos = new Float32Array(count * 3);
+    const count = 15000, geo = new THREE.BufferGeometry(), pos = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-        pos[i * 3] = (Math.random() - 0.5) * 250; pos[i * 3 + 1] = Math.random() * 70; pos[i * 3 + 2] = (Math.random() - 0.5) * 250;
+        pos[i * 3] = (Math.random() - 0.5) * 600; 
+        pos[i * 3 + 1] = (Math.random() - 0.5) * 600; 
+        pos[i * 3 + 2] = (Math.random() - 0.5) * 600;
     }
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    snowParticles = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.1, color: 0xffffff, transparent: true, opacity: 0.4 }));
+    snowParticles = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.1, color: 0xffffff, transparent: true, opacity: 0.5 }));
     introScene.add(snowParticles);
 }
