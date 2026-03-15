@@ -203,24 +203,24 @@ function createSpectacularAurora() {
 
 function createCosmicBackground() {
     // Large sphere for a nebula background
-    const geo = new THREE.SphereGeometry(450, 32, 32);
+    const geo = new THREE.SphereGeometry(480, 32, 32);
     const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = 512;
+    canvas.width = canvas.height = 1024; // Higher res
     const ctx = canvas.getContext("2d");
     
-    // Base space color
-    ctx.fillStyle = "#020815";
-    ctx.fillRect(0, 0, 512, 512);
+    // Deeper space color
+    ctx.fillStyle = "#01040a";
+    ctx.fillRect(0, 0, 1024, 1024);
     
-    // Add multiple nebulas
-    for(let i=0; i<8; i++) {
-        const x = Math.random() * 512, y = Math.random() * 512, r = 100 + Math.random() * 200;
+    // Add much more subtle nebulas
+    for(let i=0; i<6; i++) {
+        const x = Math.random() * 1024, y = Math.random() * 1024, r = 200 + Math.random() * 400;
         const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-        const h = Math.random() > 0.5 ? 200 : 280; // Blue or Purple
-        grad.addColorStop(0, `hsla(${h}, 70%, 30%, 0.15)`);
+        const h = Math.random() > 0.5 ? 220 : 260; // Deeper Blues/Purples
+        grad.addColorStop(0, `hsla(${h}, 50%, 15%, 0.1)`);
         grad.addColorStop(1, "transparent");
         ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, 512, 512);
+        ctx.fillRect(0, 0, 1024, 1024);
     }
     
     const tex = new THREE.CanvasTexture(canvas);
@@ -353,8 +353,8 @@ function introAnimate() {
     if (snowParticles) {
         const pa = snowParticles.geometry.attributes.position;
         for (let i = 0; i < pa.count; i++) {
-            let pz = pa.getZ(i) + 0.2;
-            pa.setZ(i, pz > 300 ? -300 : pz);
+            let pz = pa.getZ(i) + 0.05; // Slower drift
+            pa.setZ(i, pz > 400 ? -400 : pz);
         }
         pa.needsUpdate = true;
     }
@@ -370,13 +370,20 @@ window.triggerIntroTransition = function (callback) {
 };
 
 function createPremiumSnow() {
-    const count = 15000, geo = new THREE.BufferGeometry(), pos = new Float32Array(count * 3);
+    // These are now the "mini stars" from Earth
+    const count = 3000, geo = new THREE.BufferGeometry(), pos = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-        pos[i * 3] = (Math.random() - 0.5) * 600; 
-        pos[i * 3 + 1] = (Math.random() - 0.5) * 600; 
-        pos[i * 3 + 2] = (Math.random() - 0.5) * 600;
+        pos[i * 3] = (Math.random() - 0.5) * 800; 
+        pos[i * 3 + 1] = (Math.random() - 0.5) * 800; 
+        pos[i * 3 + 2] = (Math.random() - 0.5) * 800;
     }
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    snowParticles = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.1, color: 0xffffff, transparent: true, opacity: 0.5 }));
+    snowParticles = new THREE.Points(geo, new THREE.PointsMaterial({ 
+        size: 0.12, 
+        color: 0xffffff, 
+        transparent: true, 
+        opacity: 0.7, 
+        sizeAttenuation: true 
+    }));
     introScene.add(snowParticles);
 }
