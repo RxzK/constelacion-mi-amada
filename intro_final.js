@@ -5,8 +5,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 /**
- * IGloo VEXIK CLONE - v6.1.0 (1:1 FIDELITY OVERHAUL)
- * Focus: Massive Chunky Blocks, Milky Snow, Soft Bloom.
+ * Aurora & Constellation Scene - v7.0.0
+ * Focus: Cinematic View, Aurora, Custom Constellation.
  */
 
 // --- GLOBAL HELPERS (Hoisted) ---
