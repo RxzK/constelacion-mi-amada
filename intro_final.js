@@ -33,15 +33,26 @@ const auroraShader = {
         varying vec2 vUv;
         varying vec3 vPosition;
 
-        float noise(vec2 n) {
+        float hash(vec2 n) {
             return fract(sin(dot(n, vec2(12.9898, 4.1414))) * 43758.5453);
+        }
+
+        float noise(vec2 n) {
+            vec2 i = floor(n);
+            vec2 f = fract(n);
+            f = f * f * (3.0 - 2.0 * f);
+            float a = hash(i);
+            float b = hash(i + vec2(1.0, 0.0));
+            float c = hash(i + vec2(0.0, 1.0));
+            float d = hash(i + vec2(1.0, 1.0));
+            return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
         }
 
         float fbm(vec2 n) {
             float total = 0.0, amplitude = 0.5;
             for (int i = 0; i < 4; i++) {
                 total += noise(n) * amplitude;
-                n += n;
+                n += n * 2.0;
                 amplitude *= 0.5;
             }
             return total;
@@ -49,27 +60,31 @@ const auroraShader = {
 
         void main() {
             vec2 uv = vUv;
-            float t = uTime * 0.5;
+            float t = uTime * 0.2; // Slower, majestic movement
             
-            // Core aurora shape
-            float n = fbm(uv * vec2(2.0, 1.0) + vec2(t * 0.2, 0.0));
-            float n2 = fbm(uv * vec2(4.0, 2.0) - vec2(t * 0.1, n));
+            // Core aurora shape with smooth noise
+            float n = fbm(uv * vec2(1.5, 0.8) + vec2(t, 0.0));
+            float n2 = fbm(uv * vec2(3.0, 1.5) - vec2(t * 0.5, n));
             
-            float aurora = smoothstep(0.3, 0.7, n * n2);
+            float aurora = smoothstep(0.2, 0.8, n * n2 * 1.5);
             
-            // Vertical rays
-            float rays = pow(fbm(vec2(uv.x * 20.0, t * 0.1)), 3.0) * 0.5;
-            aurora += rays * smoothstep(0.0, 0.5, uv.y) * smoothstep(1.0, 0.5, uv.y);
+            // Vertical rays with higher frequency smooth noise
+            float rays = pow(noise(vec2(uv.x * 25.0, t * 0.05)), 4.0) * 0.7;
+            aurora += rays * smoothstep(0.0, 0.4, uv.y) * smoothstep(1.0, 0.6, uv.y);
             
-            // Color mapping
-            vec3 color = mix(uColor1, uColor2, n);
-            color = mix(color, uColor3, n2);
+            // Rich, spectacular color mapping (Emerald Green, Deep Cyan, Royal Purple)
+            vec3 vColor1 = vec3(0.0, 1.0, 0.8); // Emerald
+            vec3 vColor2 = vec3(0.0, 0.6, 1.0); // Cyan
+            vec3 vColor3 = vec3(0.6, 0.2, 1.0); // Purple
             
-            // Edge fading
-            float fade = smoothstep(0.0, 0.3, uv.y) * smoothstep(1.0, 0.7, uv.y);
+            vec3 color = mix(vColor1, vColor2, n);
+            color = mix(color, vColor3, n2);
+            
+            // Soft edge fading for non-geometric feel
+            float fade = smoothstep(0.0, 0.4, uv.y) * smoothstep(1.0, 0.8, uv.y);
             fade *= smoothstep(0.0, 0.2, uv.x) * smoothstep(1.0, 0.8, uv.x);
             
-            gl_FragColor = vec4(color, aurora * fade * 0.8);
+            gl_FragColor = vec4(color, aurora * fade * 0.9);
         }
     `
 };
@@ -113,7 +128,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 12.0.0 (Celestial)";
+        vTag.textContent = "VER: 13.0.0 (Spectacular)";
 
         introActive = true;
 
@@ -379,8 +394,8 @@ window.triggerIntroTransition = function (callback) {
 };
 
 function createPremiumSnow() {
-    // These are now the "mini stars" from Earth
-    const count = 3000, geo = new THREE.BufferGeometry(), pos = new Float32Array(count * 3);
+    // These are now the "mini stars" from Earth - minimal and clean
+    const count = 1000, geo = new THREE.BufferGeometry(), pos = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
         pos[i * 3] = (Math.random() - 0.5) * 800; 
         pos[i * 3 + 1] = (Math.random() - 0.5) * 800; 
@@ -388,10 +403,10 @@ function createPremiumSnow() {
     }
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     snowParticles = new THREE.Points(geo, new THREE.PointsMaterial({ 
-        size: 0.12, 
+        size: 0.15, 
         color: 0xffffff, 
         transparent: true, 
-        opacity: 0.7, 
+        opacity: 0.8, 
         sizeAttenuation: true 
     }));
     introScene.add(snowParticles);
