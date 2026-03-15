@@ -112,7 +112,7 @@ const fbm = (x, y, oct = 6) => {
 
 // --- SCENE GLOBALS ---
 let introRenderer, introScene, introCamera, introComposer, introBloom;
-let iglooGroup, snowParticles, introActive = true, introAnimId;
+let iglooGroup, snowParticles, cosmicDust, shootingStars = [], introActive = true, introAnimId;
 const introClock = { t: 0 };
 
 window.initIntroScene = function () {
@@ -128,7 +128,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 14.0.0 (Harmony)";
+        vTag.textContent = "VER: 15.0.0 (Magic & Detail)";
 
         introActive = true;
 
@@ -158,6 +158,7 @@ window.initIntroScene = function () {
         // 4. OBJECTS
         createCosmicBackground();
         createPremiumSnow();
+        createCosmicGlitter();
         createSpectacularAurora();
         createCustomConstellation();
         initIglooInteraction();
@@ -276,7 +277,11 @@ function createCustomConstellation() {
     ];
 
     const starMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 });
+    const lineMat = new THREE.LineBasicMaterial({ 
+        color: 0xffffff, 
+        transparent: true, 
+        opacity: 0.3
+    });
 
     const allStars = [...virgoStars, ...libraStars];
     
@@ -346,6 +351,7 @@ function initIglooInteraction() {
 function triggerTransition() {
     // Elegant bloom flash, not blinding
     gsap.to(introBloom, { strength: 12, radius: 1.5, duration: 2.5, ease: "power2.inOut" });
+    gsap.to(starsGroup.scale, { x: 1.5, y: 1.5, z: 1.5, duration: 3, ease: "power2.inOut" });
     setTimeout(() => { 
         if (window.triggerIntroTransition) window.triggerIntroTransition(); 
     }, 2000);
@@ -368,6 +374,10 @@ function introAnimate() {
         }
     });
 
+    // Shooting Stars Logic
+    if (Math.random() < 0.005) createShootingStar();
+    updateShootingStars();
+
     // Pulse Constellation Stars
     if (window.starsGroup) {
         window.starsGroup.children.forEach((star, i) => {
@@ -376,15 +386,30 @@ function introAnimate() {
                 star.scale.set(s, s, s);
             }
         });
+        // Energy Flow for Lines
+        const lines = window.starsGroup.children.find(c => c instanceof THREE.LineSegments);
+        if (lines) {
+            lines.material.opacity = 0.2 + Math.sin(t * 3) * 0.1;
+        }
     }
 
     if (snowParticles) {
         const pa = snowParticles.geometry.attributes.position;
         for (let i = 0; i < pa.count; i++) {
-            let pz = pa.getZ(i) + 0.05; // Slower drift
+            let pz = pa.getZ(i) + 0.08; // Mid-ground stars
             pa.setZ(i, pz > 400 ? -400 : pz);
         }
         pa.needsUpdate = true;
+    }
+
+    if (cosmicDust) {
+        const pa = cosmicDust.geometry.attributes.position;
+        for (let i = 0; i < pa.count; i++) {
+            let pz = pa.getZ(i) + 0.15; // Closer, faster glitter
+            pa.setZ(i, pz > 300 ? -300 : pz);
+        }
+        pa.needsUpdate = true;
+        cosmicDust.rotation.y += 0.0005;
     }
 
     if (introComposer) introComposer.render();
@@ -402,8 +427,8 @@ window.triggerIntroTransition = function (callback) {
 };
 
 function createPremiumSnow() {
-    // These are now the "mini stars" from Earth - minimal and clean
-    const count = 1000, geo = new THREE.BufferGeometry(), pos = new Float32Array(count * 3);
+    // Mid-ground stars
+    const count = 1500, geo = new THREE.BufferGeometry(), pos = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
         pos[i * 3] = (Math.random() - 0.5) * 800; 
         pos[i * 3 + 1] = (Math.random() - 0.5) * 800; 
@@ -414,8 +439,59 @@ function createPremiumSnow() {
         size: 0.15, 
         color: 0xffffff, 
         transparent: true, 
-        opacity: 0.8, 
+        opacity: 0.5, 
         sizeAttenuation: true 
     }));
     introScene.add(snowParticles);
+}
+
+function createCosmicGlitter() {
+    // Foreground interactive dust
+    const count = 500, geo = new THREE.BufferGeometry(), pos = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+        pos[i * 3] = (Math.random() - 0.5) * 400; 
+        pos[i * 3 + 1] = (Math.random() - 0.5) * 400; 
+        pos[i * 3 + 2] = (Math.random() - 0.5) * 400;
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    cosmicDust = new THREE.Points(geo, new THREE.PointsMaterial({ 
+        size: 0.25, 
+        color: 0xaaddff, 
+        transparent: true, 
+        opacity: 0.4, 
+        blending: THREE.AdditiveBlending,
+        sizeAttenuation: true 
+    }));
+    introScene.add(cosmicDust);
+}
+
+function createShootingStar() {
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array([0, 0, 0, -10, -5, 0]); // Tail
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 });
+    const line = new THREE.Line(geo, mat);
+    
+    line.position.set((Math.random()-0.5)*300, 50+Math.random()*50, -150);
+    line.rotation.z = Math.random() * Math.PI;
+    
+    introScene.add(line);
+    
+    const star = { mesh: line, life: 1.0, speed: 2 + Math.random() * 3 };
+    gsap.to(mat, { opacity: 0.8, duration: 0.2 });
+    shootingStars.push(star);
+}
+
+function updateShootingStars() {
+    for (let i = shootingStars.length - 1; i >= 0; i--) {
+        const s = shootingStars[i];
+        s.mesh.position.x += s.speed;
+        s.mesh.position.y -= s.speed * 0.5;
+        s.life -= 0.02;
+        s.mesh.material.opacity = s.life;
+        if (s.life <= 0) {
+            introScene.remove(s.mesh);
+            shootingStars.splice(i, 1);
+        }
+    }
 }
