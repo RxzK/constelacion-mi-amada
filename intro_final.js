@@ -128,7 +128,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 22.0.0 (Majestic Diagonal)";
+        vTag.textContent = "VER: 23.0.0 (Celestial Story)";
 
         introActive = true;
 
@@ -367,7 +367,64 @@ function createCustomConstellation() {
     group.add(lines);
     group.scale.set(1.2, 1.2, 1.2); // Global scale boost
 
+    // --- CELESTIAL IDENTITY LABELS ---
+    // Virgo Label
+    const virgoLabel = createCelestialLabel("Virgo (Tu Corazón)", "23 Ago - 22 Sep");
+    virgoLabel.position.set(-30, 60, -100);
+    group.add(virgoLabel);
+
+    // Libra Label
+    const libraLabel = createCelestialLabel("Libra (Su Alma)", "23 Sep - 22 Oct");
+    libraLabel.position.set(20, 45, -105);
+    group.add(libraLabel);
+
+    // UNION BRIDGE LABEL (March 20, 2026)
+    const unionLabel = createCelestialLabel("Nuestra Unión", "Viernes, 20 de Marzo 2026", "#ffd700"); // Gold highlight
+    unionLabel.position.set(-10, -30, -102);
+    group.add(unionLabel);
+
     introScene.add(group);
+}
+
+function createCelestialLabel(title, subtitle, color = "#aaddff") {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1024;
+    canvas.height = 256;
+    const ctx = canvas.getContext("2d");
+
+    // Title
+    ctx.font = "bold 64px 'Outfit', sans-serif";
+    ctx.fillStyle = color;
+    ctx.textAlign = "center";
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = "rgba(0,0,0,0.8)"; // Edge contrast
+    ctx.fillText(title, 512, 100);
+
+    // Glow Effect for Title
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = color;
+    ctx.fillText(title, 512, 100);
+
+    // Subtitle
+    ctx.font = "300 42px 'Outfit', sans-serif";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+    ctx.shadowBlur = 0;
+    ctx.fillText(subtitle, 512, 180);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    const mat = new THREE.SpriteMaterial({ 
+        map: tex, 
+        transparent: true, 
+        opacity: 0, // Initial opacity for fade-in
+        blending: THREE.AdditiveBlending 
+    });
+    const sprite = new THREE.Sprite(mat);
+    sprite.scale.set(40, 10, 1);
+    
+    // Fade in
+    gsap.to(mat, { opacity: 0.9, duration: 3, delay: 2, ease: "power2.out" });
+    
+    return sprite;
 }
 
 function makeGlowTexture(color) {
