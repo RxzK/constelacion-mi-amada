@@ -128,7 +128,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 16.0.0 (Crystal Clear)";
+        vTag.textContent = "VER: 17.0.0 (Crystal Fix)";
 
         introActive = true;
 
@@ -427,6 +427,11 @@ function introAnimate() {
         pa.needsUpdate = true;
         cosmicDust.rotation.y += 0.0005;
     }
+
+    if (introComposer) introComposer.render();
+    else introRenderer.render(introScene, introCamera);
+}
+
 function makeSoftStarTexture() {
     const size = 32;
     const c = document.createElement("canvas");
@@ -440,10 +445,6 @@ function makeSoftStarTexture() {
     ctx.fillRect(0,0,size,size);
     const tex = new THREE.CanvasTexture(c);
     return tex;
-}
-
-    if (introComposer) introComposer.render();
-    else introRenderer.render(introScene, introCamera);
 }
 
 window.triggerIntroTransition = function (callback) {
