@@ -113,7 +113,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 6.1.0 (Vexik Clone)";
+        vTag.textContent = "VER: 12.0.0 (Celestial)";
 
         introActive = true;
 
@@ -310,17 +310,22 @@ function makeGlowTexture(color) {
 // Igloo removal cleanup
 
 function initIglooInteraction() {
-    // This function can be kept empty or removed as we don't have the igloo anymore
-    // But we can add a simple interaction with the landscape
-    window.addEventListener('click', () => {
-        if (!introActive) return;
-        triggerTransition();
-    });
+    const enterBtn = document.getElementById('enter-btn');
+    if (enterBtn) {
+        enterBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!introActive) return;
+            triggerTransition();
+        });
+    }
 }
 
 function triggerTransition() {
-    gsap.to(introBloom, { strength: 30, radius: 2.5, duration: 2 });
-    setTimeout(() => { if (window.triggerIntroTransition) window.triggerIntroTransition(); }, 1800);
+    // Elegant bloom flash, not blinding
+    gsap.to(introBloom, { strength: 12, radius: 1.5, duration: 2.5, ease: "power2.inOut" });
+    setTimeout(() => { 
+        if (window.triggerIntroTransition) window.triggerIntroTransition(); 
+    }, 2000);
 }
 
 function introAnimate() {
@@ -364,9 +369,13 @@ function introAnimate() {
 }
 
 window.triggerIntroTransition = function (callback) {
-    introActive = false; cancelAnimationFrame(introAnimId);
-    gsap.to(introCamera.position, { y: 200, duration: 3, ease: "power3.in" });
-    gsap.to("#intro-whiteout", { opacity: 1, duration: 2, delay: 0.5, onComplete: callback });
+    if (!introActive) return;
+    introActive = false; 
+    cancelAnimationFrame(introAnimId);
+    
+    // Smooth camera fly-through
+    gsap.to(introCamera.position, { z: -300, duration: 4, ease: "power3.in" });
+    gsap.to("#intro-whiteout", { opacity: 1, duration: 2.5, delay: 1, onComplete: callback });
 };
 
 function createPremiumSnow() {
