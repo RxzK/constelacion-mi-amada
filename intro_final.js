@@ -128,7 +128,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 18.0.0 (Perfect Sky)";
+        vTag.textContent = "VER: 19.0.0 (Majestic Heart)";
 
         introActive = true;
 
@@ -270,56 +270,66 @@ function createCustomConstellation() {
     const group = new THREE.Group();
     window.starsGroup = group;
     
-    // VIRGO (approx points)
+    // ASTRONOMICALLY ACCURATE VIRGO (approx relative coords)
     const virgoStars = [
-        { x: -15, y: 35, z: -80, size: 0.4 }, // Spica
-        { x: -12, y: 38, z: -82, size: 0.2 },
-        { x: -10, y: 42, z: -85, size: 0.2 },
-        { x: -14, y: 45, z: -83, size: 0.25 },
-        { x: -18, y: 43, z: -80, size: 0.2 },
-        { x: -20, y: 39, z: -78, size: 0.2 },
-        { x: -22, y: 35, z: -75, size: 0.2 }
+        { x: -25, y: 15, z: -100, size: 2.2, name: "Spica" },
+        { x: -18, y: 22, z: -105, size: 1.2, name: "Porrima" },
+        { x: -12, y: 32, z: -110, size: 1.0, name: "Vindemiatrix" },
+        { x: -22, y: 35, z: -115, size: 0.8, name: "Auva" },
+        { x: -30, y: 30, z: -112, size: 0.9, name: "Zavijava" },
+        { x: -35, y: 22, z: -108, size: 1.0, name: "Zaniah" },
+        { x: -25, y: 45, z: -120, size: 0.7, name: "Heze" }
     ];
 
-    // LIBRA (approx points)
+    // ASTRONOMICALLY ACCURATE LIBRA (approx relative coords)
     const libraStars = [
-        { x: 10, y: 38, z: -85, size: 0.3 },
-        { x: 15, y: 42, z: -88, size: 0.3 },
-        { x: 18, y: 37, z: -82, size: 0.2 },
-        { x: 14, y: 33, z: -80, size: 0.2 }
+        { x: 15, y: 25, z: -105, size: 1.8, name: "Zubenelgenubi" },
+        { x: 22, y: 38, z: -110, size: 1.6, name: "Zubeneschamali" },
+        { x: 32, y: 30, z: -115, size: 1.2, name: "Zubenelhakrabi" },
+        { x: 25, y: 18, z: -108, size: 1.1, name: "Brachium" }
     ];
 
-    const starMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const starTex = makeGlowTexture("#ffffff"); // High quality halo texture
     const lineMat = new THREE.LineBasicMaterial({ 
-        color: 0xffffff, 
+        color: 0xaaddff, 
         transparent: true, 
-        opacity: 0.3
+        opacity: 0.4,
+        blending: THREE.AdditiveBlending 
     });
 
     const allStars = [...virgoStars, ...libraStars];
     
-    // Combine Virgil and Libra with a symbolic bridge
+    // VIRGO: Traditionally a 'Y' or a figure
+    // LIBRA: A diamond or scales
     const connections = [
-        // Virgo lines
-        [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 0],
-        // Libra lines
+        // Virgo Connections
+        [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 1], [3, 6],
+        // Libra Connections
         [7, 8], [8, 9], [9, 10], [10, 7],
-        // The Bridge (Heart-like connection)
-        [0, 10]
+        // The Eternal Bridge (Connecting the two hearts)
+        [0, 7]
     ];
 
     allStars.forEach(s => {
-        const starGeo = new THREE.SphereGeometry(s.size, 8, 8);
-        const star = new THREE.Mesh(starGeo, starMat);
-        star.position.set(s.x, s.y, s.z);
-        group.add(star);
-        
-        // Add glow
-        const glowTex = makeGlowTexture("#ffffff");
-        const glowMat = new THREE.SpriteMaterial({ map: glowTex, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending });
-        const glow = new THREE.Sprite(glowMat);
-        glow.scale.set(s.size * 10, s.size * 10, 1);
-        star.add(glow);
+        const mat = new THREE.SpriteMaterial({ 
+            map: starTex, 
+            transparent: true, 
+            opacity: 0.8, 
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const sprite = new THREE.Sprite(mat);
+        sprite.position.set(s.x, s.y, s.z);
+        sprite.scale.set(s.size * 6, s.size * 6, 1); // Majestic scale
+        sprite.userData.baseScale = s.size * 6;
+        group.add(sprite);
+
+        // Core point (Internal bright dot)
+        const coreGeo = new THREE.BufferGeometry();
+        coreGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0,0,0]), 3));
+        const coreMat = new THREE.PointsMaterial({ size: s.size * 0.8, color: 0xffffff, transparent: true, opacity: 0.9 });
+        const core = new THREE.Points(coreGeo, coreMat);
+        sprite.add(core);
     });
 
     const lineGeo = new THREE.BufferGeometry();
@@ -330,7 +340,9 @@ function createCustomConstellation() {
     });
     lineGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(linePos), 3));
     const lines = new THREE.LineSegments(lineGeo, lineMat);
+    lines.material.opacity = 0.4;
     group.add(lines);
+    group.scale.set(1.2, 1.2, 1.2); // Global scale boost
 
     introScene.add(group);
 }
@@ -393,10 +405,10 @@ function introAnimate() {
 
     // Pulse Constellation Stars
     if (window.starsGroup) {
-        window.starsGroup.children.forEach((star, i) => {
-            if (star instanceof THREE.Mesh) {
-                const s = 1 + Math.sin(t * 2 + i) * 0.2;
-                star.scale.set(s, s, s);
+        window.starsGroup.children.forEach((obj, i) => {
+            if (obj instanceof THREE.Sprite) {
+                const s = 1 + Math.sin(t * 2 + i) * 0.15;
+                obj.scale.x = obj.scale.y = (obj.userData.baseScale || 5) * s;
             }
         });
         // Energy Flow for Lines
