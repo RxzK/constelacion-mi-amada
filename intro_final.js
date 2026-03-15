@@ -128,7 +128,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 19.0.0 (Majestic Heart)";
+        vTag.textContent = "VER: 20.0.0 (Perfect Contrast)";
 
         introActive = true;
 
@@ -229,13 +229,13 @@ function createCosmicBackground() {
     ctx.fillStyle = "#010308";
     ctx.fillRect(0, 0, 2048, 2048);
 
-    // Galactic Plane (Milky Way Band) - Soft and Broad
-    const galacticGrad = ctx.createLinearGradient(0, 0, 2048, 2048);
+    // Galactic Plane (Milky Way Band) - Shifted UP to enmarque
+    const galacticGrad = ctx.createLinearGradient(0, 0, 2048, 800);
     galacticGrad.addColorStop(0, "rgba(2, 6, 15, 0)");
-    galacticGrad.addColorStop(0.5, "rgba(40, 65, 120, 0.15)");
+    galacticGrad.addColorStop(0.5, "rgba(40, 65, 120, 0.18)");
     galacticGrad.addColorStop(1, "rgba(2, 6, 15, 0)");
     ctx.fillStyle = galacticGrad;
-    ctx.fillRect(0, 0, 2048, 2048);
+    ctx.fillRect(0, 0, 2048, 1024);
     
     // Add subtle, organic nebulas with CANVAS BLUR
     ctx.filter = 'blur(120px)'; // EPIC SMOOTHNESS
@@ -270,23 +270,23 @@ function createCustomConstellation() {
     const group = new THREE.Group();
     window.starsGroup = group;
     
-    // ASTRONOMICALLY ACCURATE VIRGO (approx relative coords)
+    // ASTRONOMICALLY ACCURATE VIRGO (Shifted Down for Contrast)
     const virgoStars = [
-        { x: -25, y: 15, z: -100, size: 2.2, name: "Spica" },
-        { x: -18, y: 22, z: -105, size: 1.2, name: "Porrima" },
-        { x: -12, y: 32, z: -110, size: 1.0, name: "Vindemiatrix" },
-        { x: -22, y: 35, z: -115, size: 0.8, name: "Auva" },
-        { x: -30, y: 30, z: -112, size: 0.9, name: "Zavijava" },
-        { x: -35, y: 22, z: -108, size: 1.0, name: "Zaniah" },
-        { x: -25, y: 45, z: -120, size: 0.7, name: "Heze" }
+        { x: -30, y: -15, z: -100, size: 2.2, name: "Spica" },
+        { x: -23, y: -8, z: -105, size: 1.2, name: "Porrima" },
+        { x: -17, y: 2, z: -110, size: 1.0, name: "Vindemiatrix" },
+        { x: -27, y: 5, z: -115, size: 0.8, name: "Auva" },
+        { x: -35, y: 0, z: -112, size: 0.9, name: "Zavijava" },
+        { x: -40, y: -8, z: -108, size: 1.0, name: "Zaniah" },
+        { x: -30, y: 15, z: -120, size: 0.7, name: "Heze" }
     ];
 
-    // ASTRONOMICALLY ACCURATE LIBRA (approx relative coords)
+    // ASTRONOMICALLY ACCURATE LIBRA (Shifted Down for Contrast)
     const libraStars = [
-        { x: 15, y: 25, z: -105, size: 1.8, name: "Zubenelgenubi" },
-        { x: 22, y: 38, z: -110, size: 1.6, name: "Zubeneschamali" },
-        { x: 32, y: 30, z: -115, size: 1.2, name: "Zubenelhakrabi" },
-        { x: 25, y: 18, z: -108, size: 1.1, name: "Brachium" }
+        { x: 10, y: -5, z: -105, size: 1.8, name: "Zubenelgenubi" },
+        { x: 17, y: 8, z: -110, size: 1.6, name: "Zubeneschamali" },
+        { x: 27, y: 0, z: -115, size: 1.2, name: "Zubenelhakrabi" },
+        { x: 20, y: -12, z: -108, size: 1.1, name: "Brachium" }
     ];
 
     const starTex = makeGlowTexture("#ffffff"); // High quality halo texture
@@ -320,8 +320,8 @@ function createCustomConstellation() {
         });
         const sprite = new THREE.Sprite(mat);
         sprite.position.set(s.x, s.y, s.z);
-        sprite.scale.set(s.size * 6, s.size * 6, 1); // Majestic scale
-        sprite.userData.baseScale = s.size * 6;
+        sprite.scale.set(s.size * 7, s.size * 7, 1); // Extra pop
+        sprite.userData.baseScale = s.size * 7;
         group.add(sprite);
 
         // Core point (Internal bright dot)
