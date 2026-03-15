@@ -128,7 +128,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 21.0.0 (Cosmic Essence)";
+        vTag.textContent = "VER: 22.0.0 (Majestic Diagonal)";
 
         introActive = true;
 
@@ -229,54 +229,56 @@ function createCosmicBackground() {
     ctx.fillStyle = "#010206";
     ctx.fillRect(0, 0, 2048, 2048);
 
-    // Create Organic 'Cosmic Clouds' instead of a linear band
-    ctx.filter = 'blur(160px)'; // Ultra smooth gas
+    // Create DIAGONAL Organic 'Cosmic Clouds'
+    ctx.filter = 'blur(180px)'; // Even smoother
     
-    // Deep Violet / Blue Clusters (Background Layer)
+    // Path: Bottom-Left to Top-Right
+    // We leave a "dark corridor" in the very center by slightly offsetting clusters
+    
+    const drawCloud = (x, y, r, color) => {
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+        grad.addColorStop(0, color);
+        grad.addColorStop(1, "transparent");
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+    };
+
+    // Layer 1: Deep Violet / Blue Voids
+    for(let i=0; i<12; i++) {
+        const t = i / 11;
+        // Asymmetric diagonal path
+        const x = t * 2048 + (Math.random() - 0.5) * 600;
+        const y = (1 - t) * 2048 + (Math.random() - 0.5) * 600;
+        const r = 500 + Math.random() * 600;
+        drawCloud(x, y, r, "rgba(40, 25, 100, 0.12)");
+    }
+
+    // Layer 2: Electric Cyan Highlights (The visible "Essence")
     for(let i=0; i<8; i++) {
-        const x = Math.random() * 2048, y = Math.random() * 800; // Shifted up
-        const r = 400 + Math.random() * 600;
-        const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-        grad.addColorStop(0, "rgba(35, 20, 80, 0.15)"); // Deep Violet
-        grad.addColorStop(1, "transparent");
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fill();
+        const t = i / 7;
+        // Offset from center to create the contrast pocket
+        const offset = (Math.random() > 0.5 ? 400 : -400); 
+        const x = t * 2048 + offset + (Math.random() - 0.5) * 200;
+        const y = (1 - t) * 2048 - offset + (Math.random() - 0.5) * 200;
+        const r = 250 + Math.random() * 450;
+        const h = 195 + Math.random() * 30; // Beautiful Cyan/Blues
+        drawCloud(x, y, r, `hsla(${h}, 70%, 25%, 0.15)`);
     }
 
-    // Cyan / Electric Blue Highlights (Mid Layer)
-    for(let i=0; i<6; i++) {
-        const x = (i/5) * 2048, y = 300 + Math.random() * 400; // Asymmetric curve-like flow
-        const r = 200 + Math.random() * 400;
-        const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-        const h = 190 + Math.random() * 40; // Cyan to Blue
-        grad.addColorStop(0, `hsla(${h}, 60%, 25%, 0.12)`);
-        grad.addColorStop(1, "transparent");
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    // Galactic Dust 'Veils' (Darker Pockets)
+    // Layer 3: Galactic Dust pockets (Multiply)
     ctx.globalCompositeOperation = "multiply";
-    for(let i=0; i<4; i++) {
-        const x = Math.random() * 2048, y = 500 + Math.random() * 500;
-        const r = 300 + Math.random() * 400;
-        const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-        grad.addColorStop(0, "rgba(10, 10, 30, 0.3)");
-        grad.addColorStop(1, "transparent");
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fill();
+    for(let i=0; i<5; i++) {
+        const x = Math.random() * 2048, y = Math.random() * 2048;
+        const r = 300 + Math.random() * 500;
+        drawCloud(x, y, r, "rgba(5, 5, 20, 0.25)");
     }
     ctx.globalCompositeOperation = "source-over";
     ctx.filter = 'none';
 
     const tex = new THREE.CanvasTexture(canvas);
-    tex.anisotropy = 8; // Max quality filtering
+    tex.anisotropy = 8;
     const mat = new THREE.MeshBasicMaterial({ 
         map: tex, 
         side: THREE.BackSide, 
