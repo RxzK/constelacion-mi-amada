@@ -111,45 +111,76 @@ window.initIntroScene = function () {
 let auroraBands = [];
 function createAurora() {
     const group = new THREE.Group();
-    const bandCount = 5;
+    const bandCount = 12; // More bands for a vaporous look
     const colors = [0x00ffcc, 0x33ff66, 0x9933ff, 0x33ccff, 0x66ff33];
 
-    for (let b = 0; b < bandCount; b++) {
-        const segs = 80;
-        const width = 200 + Math.random() * 100;
-        const height = 60 + Math.random() * 30;
-        const geo = new THREE.PlaneGeometry(width, height, segs, 15);
-        
-        // Custom vertical gradient via vertex colors
-        const colorsArr = [];
-        for (let i = 0; i < geo.attributes.position.count; i++) {
-            const vy = (geo.attributes.position.getY(i) / height) + 0.5; // 0 to 1
-            const op = Math.pow(vy, 2.5); // Soft fade at bottom
-            colorsArr.push(op, op, op); // Using RGB as opacity mask in BasicMaterial is tricky, but we can do it with a shader later
-        }
+    // Create a shared soft texture for aurora spirits
+    const auroraTex = makeAuroraMistTexture();
 
-        const mat = new THREE.MeshBasicMaterial({
+    for (let b = 0; b < bandCount; b++) {
+        const mat = new THREE.SpriteMaterial({
+            map: auroraTex,
             color: colors[b % colors.length],
             transparent: true,
-            opacity: 0.12,
-            side: THREE.DoubleSide,
+            opacity: 0.0, // Start invisible, fade in via anima
             blending: THREE.AdditiveBlending,
             depthWrite: false
         });
 
-        const band = new THREE.Mesh(geo, mat);
-        band.position.set(0, 40 + b * 10, -150 - b * 30);
-        band.rotation.x = Math.PI * 0.05;
+        const sprite = new THREE.Sprite(mat);
         
-        band.userData.phases = [];
-        for (let i = 0; i < geo.attributes.position.count; i++) {
-            band.userData.phases.push(Math.random() * Math.PI * 2);
-        }
+        // Position them in a wide arc
+        const angle = (b / bandCount) * Math.PI - Math.PI/2;
+        const radius = 150 + Math.random() * 50;
+        sprite.position.set(
+            Math.sin(angle) * radius,
+            20 + Math.random() * 40,
+            -180 - Math.random() * 50
+        );
+        
+        sprite.scale.set(60 + Math.random() * 40, 100 + Math.random() * 50, 1);
+        
+        // Animation metadata
+        sprite.userData = {
+            baseOpacity: 0.05 + Math.random() * 0.1,
+            speed: 0.2 + Math.random() * 0.3,
+            phase: Math.random() * Math.PI * 2,
+            driftX: (Math.random() - 0.5) * 0.1,
+            driftY: (Math.random() - 0.5) * 0.05
+        };
 
-        group.add(band);
-        auroraBands.push(band);
+        group.add(sprite);
+        auroraBands.push(sprite);
     }
     introScene.add(group);
+}
+
+function makeAuroraMistTexture() {
+    const canvas = document.createElement("canvas");
+    canvas.width = 128;
+    canvas.height = 256;
+    const ctx = canvas.getContext("2d");
+    
+    const grad = ctx.createLinearGradient(0, 256, 0, 0);
+    grad.addColorStop(0, "rgba(255, 255, 255, 0)");
+    grad.addColorStop(0.2, "rgba(255, 255, 255, 0.2)");
+    grad.addColorStop(0.5, "rgba(255, 255, 255, 0.4)");
+    grad.addColorStop(0.8, "rgba(255, 255, 255, 0.1)");
+    grad.addColorStop(1, "rgba(255, 255, 255, 0)");
+    
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 128, 256);
+    
+    // Add some organic noise/softness
+    for(let i=0; i<10; i++) {
+        ctx.filter = "blur(10px)";
+        ctx.fillStyle = "rgba(255,255,255,0.05)";
+        ctx.beginPath();
+        ctx.ellipse(Math.random()*128, Math.random()*256, 20, 50, Math.random()*Math.PI, 0, Math.PI*2);
+        ctx.fill();
+    }
+    
+    return new THREE.CanvasTexture(canvas);
 }
 
 function createCustomConstellation() {
@@ -255,18 +286,19 @@ function introAnimate() {
     introCamera.position.y = Math.cos(t * 0.1) * 5;
     introCamera.lookAt(0, 0, -100);
 
-    // Animate Aurora
-    auroraBands.forEach((band, b) => {
-        const pos = band.geometry.attributes.position;
-        for (let i = 0; i < pos.count; i++) {
-            const x = pos.getX(i);
-            const z = pos.getZ(i);
-            const phase = band.userData.phases[i];
-            const wave = Math.sin(t * 0.3 + x * 0.03 + phase * 0.1) * 8;
-            pos.setY(i, wave);
-        }
-        pos.needsUpdate = true;
-        band.material.opacity = 0.06 + Math.sin(t * 0.2 + b) * 0.03;
+    // Animate Aurora (Ethereal Mist)
+    auroraBands.forEach((sprite) => {
+        const ud = sprite.userData;
+        const pulse = Math.sin(t * ud.speed + ud.phase);
+        sprite.material.opacity = ud.baseOpacity * (0.7 + 0.3 * pulse);
+        
+        // Subtle drift
+        sprite.position.x += ud.driftX;
+        sprite.position.y += ud.driftY;
+        
+        // Wrap around drift
+        if (Math.abs(sprite.position.x) > 300) sprite.position.x *= -0.9;
+        if (Math.abs(sprite.position.y) > 100) sprite.position.y *= -0.9;
     });
 
     if (snowParticles) {
