@@ -128,7 +128,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 15.0.0 (Magic & Detail)";
+        vTag.textContent = "VER: 16.0.0 (Crystal Clear)";
 
         introActive = true;
 
@@ -138,6 +138,7 @@ window.initIntroScene = function () {
         introRenderer.setSize(canvas.clientWidth, canvas.clientHeight);
         introRenderer.toneMapping = THREE.ACESFilmicToneMapping;
         introRenderer.toneMappingExposure = 1.3;
+        introRenderer.outputColorSpace = THREE.SRGBColorSpace;
 
         // 2. SCENE & CAMERA
         introScene = new THREE.Scene();
@@ -231,24 +232,39 @@ function createCosmicBackground() {
     // Galactic Plane (Milky Way Band)
     const galacticGrad = ctx.createLinearGradient(0, 0, 1024, 1024);
     galacticGrad.addColorStop(0, "rgba(2, 6, 15, 0)");
-    galacticGrad.addColorStop(0.5, "rgba(40, 60, 100, 0.08)");
+    galacticGrad.addColorStop(0.5, "rgba(40, 60, 100, 0.12)");
     galacticGrad.addColorStop(1, "rgba(2, 6, 15, 0)");
     ctx.fillStyle = galacticGrad;
     ctx.fillRect(0, 0, 1024, 1024);
     
-    // Add subtle, high-quality nebulas
-    for(let i=0; i<12; i++) {
-        const x = Math.random() * 1024, y = Math.random() * 1024, r = 150 + Math.random() * 350;
+    // Add subtle, high-quality nebulas with noise to prevent banding
+    for(let i=0; i<15; i++) {
+        const x = Math.random() * 1024, y = Math.random() * 1024, r = 100 + Math.random() * 400;
         const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
         const h = Math.random() > 0.5 ? 210 : 270; 
-        grad.addColorStop(0, `hsla(${h}, 60%, 20%, 0.12)`);
+        grad.addColorStop(0, `hsla(${h}, 60%, 25%, 0.15)`);
         grad.addColorStop(1, "transparent");
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, 1024, 1024);
     }
+
+    // Add film-grain noise to the canvas to BREAK BANDING
+    const imgData = ctx.getImageData(0, 0, 1024, 1024);
+    for (let i = 0; i < imgData.data.length; i += 4) {
+        const noise = (Math.random() - 0.5) * 4;
+        imgData.data[i] += noise;
+        imgData.data[i+1] += noise;
+        imgData.data[i+2] += noise;
+    }
+    ctx.putImageData(imgData, 0, 0);
     
     const tex = new THREE.CanvasTexture(canvas);
-    const mat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, depthWrite: false });
+    const mat = new THREE.MeshBasicMaterial({ 
+        map: tex, 
+        side: THREE.BackSide, 
+        depthWrite: false,
+        dithering: true // CRITICAL: Fixes banding
+    });
     const bg = new THREE.Mesh(geo, mat);
     introScene.add(bg);
 }
@@ -411,6 +427,20 @@ function introAnimate() {
         pa.needsUpdate = true;
         cosmicDust.rotation.y += 0.0005;
     }
+function makeSoftStarTexture() {
+    const size = 32;
+    const c = document.createElement("canvas");
+    c.width = c.height = size;
+    const ctx = c.getContext("2d");
+    const grad = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+    grad.addColorStop(0, "rgba(255,255,255,1)");
+    grad.addColorStop(0.2, "rgba(200,230,255,0.6)");
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,size,size);
+    const tex = new THREE.CanvasTexture(c);
+    return tex;
+}
 
     if (introComposer) introComposer.render();
     else introRenderer.render(introScene, introCamera);
@@ -427,6 +457,7 @@ window.triggerIntroTransition = function (callback) {
 };
 
 function createPremiumSnow() {
+    const starTex = makeSoftStarTexture();
     // Mid-ground stars
     const count = 1500, geo = new THREE.BufferGeometry(), pos = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
@@ -436,16 +467,19 @@ function createPremiumSnow() {
     }
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     snowParticles = new THREE.Points(geo, new THREE.PointsMaterial({ 
-        size: 0.15, 
-        color: 0xffffff, 
+        size: 1.2, // Larger but soft
+        map: starTex,
         transparent: true, 
-        opacity: 0.5, 
-        sizeAttenuation: true 
+        opacity: 0.6, 
+        sizeAttenuation: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
     }));
     introScene.add(snowParticles);
 }
 
 function createCosmicGlitter() {
+    const starTex = makeSoftStarTexture();
     // Foreground interactive dust
     const count = 500, geo = new THREE.BufferGeometry(), pos = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
@@ -455,12 +489,13 @@ function createCosmicGlitter() {
     }
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     cosmicDust = new THREE.Points(geo, new THREE.PointsMaterial({ 
-        size: 0.25, 
-        color: 0xaaddff, 
+        size: 2.0, // Larger but soft
+        map: starTex,
         transparent: true, 
-        opacity: 0.4, 
+        opacity: 0.3, 
         blending: THREE.AdditiveBlending,
-        sizeAttenuation: true 
+        sizeAttenuation: true,
+        depthWrite: false
     }));
     introScene.add(cosmicDust);
 }
