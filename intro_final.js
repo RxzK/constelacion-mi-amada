@@ -62,7 +62,7 @@ window.initIntroScene = function () {
         // 2. SCENE & CAMERA
         introScene = new THREE.Scene();
         introScene.background = new THREE.Color(0x020815);
-        introScene.fog = new THREE.FogExp2(0x020815, 0.01);
+        introScene.fog = new THREE.Fog(0x020815, 10, 300);
 
         introCamera = new THREE.PerspectiveCamera(40, canvas.clientWidth / canvas.clientHeight, 0.1, 500);
         introCamera.position.set(0, 6, 22);
@@ -110,56 +110,105 @@ window.initIntroScene = function () {
 };
 
 function createCinematicTerrain() {
-    const geo = new THREE.PlaneGeometry(500, 500, 100, 100);
+    const geo = new THREE.PlaneGeometry(600, 600, 120, 120);
     geo.rotateX(-Math.PI / 2);
     const pos = geo.attributes.position;
     for (let i = 0; i < pos.count; i++) {
         const x = pos.getX(i), z = pos.getZ(i);
-        let y = fbm(x * 0.01, z * 0.01, 4) * 12;
-        // Make center a bit flatter but still slightly hilly
+        let y = fbm(x * 0.015, z * 0.015, 5) * 15;
         const d = Math.sqrt(x * x + z * z);
-        if (d < 30) y *= (d / 30);
-        pos.setY(i, y - 5);
+        if (d < 40) y *= (d / 40);
+        pos.setY(i, y - 8);
     }
     geo.computeVertexNormals();
+
+    // Procedural Snow Texture
+    const size = 256;
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    for (let i = 0; i < size * size; i++) {
+        const val = 200 + Math.random() * 55;
+        ctx.fillStyle = `rgb(${val},${val},${val})`;
+        ctx.fillRect(i % size, Math.floor(i / size), 1, 1);
+    }
+    const snowTex = new THREE.CanvasTexture(canvas);
+    snowTex.wrapS = snowTex.wrapT = THREE.RepeatWrapping;
+    snowTex.repeat.set(50, 50);
+
     const mat = new THREE.MeshStandardMaterial({ 
-        color: 0xeeeeff, 
-        roughness: 0.9, 
+        color: 0xffffff, 
+        roughness: 0.8, 
+        metalness: 0.1,
+        map: snowTex,
+        roughnessMap: snowTex,
         emissive: 0x112244, 
-        emissiveIntensity: 0.2 
+        emissiveIntensity: 0.15 
     });
+
     const terrain = new THREE.Mesh(geo, mat);
     introScene.add(terrain);
+    
+    // Add procedural sparkles
+    const sparkleCount = 4000;
+    const sGeo = new THREE.BufferGeometry();
+    const sPos = new Float32Array(sparkleCount * 3);
+    for (let i = 0; i < sparkleCount; i++) {
+        const rx = (Math.random() - 0.5) * 500;
+        const rz = (Math.random() - 0.5) * 500;
+        sPos[i * 3] = rx;
+        sPos[i * 3 + 1] = fbm(rx * 0.015, rz * 0.015, 5) * 15 - 7.9; // Slightly above ground
+        sPos[i * 3 + 2] = rz;
+    }
+    sGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
+    const sMat = new THREE.PointsMaterial({ 
+        size: 0.15, 
+        color: 0xffffff, 
+        transparent: true, 
+        opacity: 0.8, 
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+    });
+    const sparkles = new THREE.Points(sGeo, sMat);
+    introScene.add(sparkles);
+    terrain.userData.sparkles = sparkles;
 }
 
 let auroraBands = [];
 function createAurora() {
     const group = new THREE.Group();
-    const bandCount = 3;
-    const colors = [0x00ffcc, 0x33ff66, 0x9933ff]; // Teal, Green, Purple
+    const bandCount = 5;
+    const colors = [0x00ffcc, 0x33ff66, 0x9933ff, 0x33ccff, 0x66ff33];
 
     for (let b = 0; b < bandCount; b++) {
-        const segs = 60;
-        const width = 150 + Math.random() * 50;
-        const height = 40 + Math.random() * 20;
-        const geo = new THREE.PlaneGeometry(width, height, segs, 10);
+        const segs = 80;
+        const width = 200 + Math.random() * 100;
+        const height = 60 + Math.random() * 30;
+        const geo = new THREE.PlaneGeometry(width, height, segs, 15);
         
+        // Custom vertical gradient via vertex colors
+        const colorsArr = [];
+        for (let i = 0; i < geo.attributes.position.count; i++) {
+            const vy = (geo.attributes.position.getY(i) / height) + 0.5; // 0 to 1
+            const op = Math.pow(vy, 2.5); // Soft fade at bottom
+            colorsArr.push(op, op, op); // Using RGB as opacity mask in BasicMaterial is tricky, but we can do it with a shader later
+        }
+
         const mat = new THREE.MeshBasicMaterial({
             color: colors[b % colors.length],
             transparent: true,
-            opacity: 0.15,
+            opacity: 0.12,
             side: THREE.DoubleSide,
             blending: THREE.AdditiveBlending,
             depthWrite: false
         });
 
         const band = new THREE.Mesh(geo, mat);
-        band.position.set(0, 50 + b * 15, -120 - b * 20);
-        band.rotation.x = Math.PI * 0.1;
+        band.position.set(0, 40 + b * 10, -150 - b * 30);
+        band.rotation.x = Math.PI * 0.05;
         
-        // Custom attribute for animation
         band.userData.phases = [];
-        for (let i = 0; i < (segs + 1) * 11; i++) {
+        for (let i = 0; i < geo.attributes.position.count; i++) {
             band.userData.phases.push(Math.random() * Math.PI * 2);
         }
 
@@ -279,11 +328,18 @@ function introAnimate() {
             const x = pos.getX(i);
             const z = pos.getZ(i);
             const phase = band.userData.phases[i];
-            const wave = Math.sin(t * 0.5 + x * 0.05 + phase * 0.2) * 5;
+            const wave = Math.sin(t * 0.4 + x * 0.04 + phase * 0.1) * 6;
             pos.setY(i, wave);
         }
         pos.needsUpdate = true;
-        band.material.opacity = 0.1 + Math.sin(t * 0.4 + b) * 0.05;
+        band.material.opacity = 0.08 + Math.sin(t * 0.3 + b) * 0.04;
+    });
+
+    // Twinkling Sparkles
+    introScene.traverse(obj => {
+        if (obj.userData && obj.userData.sparkles) {
+            obj.userData.sparkles.material.opacity = 0.6 + Math.sin(t * 5) * 0.4;
+        }
     });
 
     if (snowParticles) {
