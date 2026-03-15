@@ -5,9 +5,74 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 /**
- * Aurora & Constellation Scene - v7.0.0
- * Focus: Cinematic View, Aurora, Custom Constellation.
+ * Spectacular Aurora & Constellation Scene - v10.0.0
+ * Focus: Advanced Shaders, Volumetric Aurora, Cosmic Deep Space.
  */
+
+const auroraShader = {
+    uniforms: {
+        uTime: { value: 0 },
+        uColor1: { value: new THREE.Color(0x00ffcc) },
+        uColor2: { value: new THREE.Color(0x33ff66) },
+        uColor3: { value: new THREE.Color(0x9933ff) }
+    },
+    vertexShader: `
+        varying vec2 vUv;
+        varying vec3 vPosition;
+        void main() {
+            vUv = uv;
+            vPosition = position;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+    `,
+    fragmentShader: `
+        uniform float uTime;
+        uniform vec3 uColor1;
+        uniform vec3 uColor2;
+        uniform vec3 uColor3;
+        varying vec2 vUv;
+        varying vec3 vPosition;
+
+        float noise(vec2 n) {
+            return fract(sin(dot(n, vec2(12.9898, 4.1414))) * 43758.5453);
+        }
+
+        float fbm(vec2 n) {
+            float total = 0.0, amplitude = 0.5;
+            for (int i = 0; i < 4; i++) {
+                total += noise(n) * amplitude;
+                n += n;
+                amplitude *= 0.5;
+            }
+            return total;
+        }
+
+        void main() {
+            vec2 uv = vUv;
+            float t = uTime * 0.5;
+            
+            // Core aurora shape
+            float n = fbm(uv * vec2(2.0, 1.0) + vec2(t * 0.2, 0.0));
+            float n2 = fbm(uv * vec2(4.0, 2.0) - vec2(t * 0.1, n));
+            
+            float aurora = smoothstep(0.3, 0.7, n * n2);
+            
+            // Vertical rays
+            float rays = pow(fbm(vec2(uv.x * 20.0, t * 0.1)), 3.0) * 0.5;
+            aurora += rays * smoothstep(0.0, 0.5, uv.y) * smoothstep(1.0, 0.5, uv.y);
+            
+            // Color mapping
+            vec3 color = mix(uColor1, uColor2, n);
+            color = mix(color, uColor3, n2);
+            
+            // Edge fading
+            float fade = smoothstep(0.0, 0.3, uv.y) * smoothstep(1.0, 0.7, uv.y);
+            fade *= smoothstep(0.0, 0.2, uv.x) * smoothstep(1.0, 0.8, uv.x);
+            
+            gl_FragColor = vec4(color, aurora * fade * 0.8);
+        }
+    `
+};
 
 // --- GLOBAL HELPERS (Hoisted) ---
 const noise = (x, y) => {
@@ -75,11 +140,10 @@ window.initIntroScene = function () {
         rim.position.set(-20, 15, -25);
         introScene.add(rim);
 
-        introScene.add(new THREE.AmbientLight(0x223355, 0.4));
-
         // 4. OBJECTS
+        createCosmicBackground();
         createPremiumSnow();
-        createAurora();
+        createSpectacularAurora();
         createCustomConstellation();
         initIglooInteraction();
 
@@ -109,82 +173,65 @@ window.initIntroScene = function () {
 // Simplified Sky View
 
 let auroraBands = [];
-function createAurora() {
+function createSpectacularAurora() {
     const group = new THREE.Group();
-    const bandCount = 12; // More bands for a vaporous look
-    const colors = [0x00ffcc, 0x33ff66, 0x9933ff, 0x33ccff, 0x66ff33];
-
-    // Create a shared soft texture for aurora spirits
-    const auroraTex = makeAuroraMistTexture();
-
-    for (let b = 0; b < bandCount; b++) {
-        const mat = new THREE.SpriteMaterial({
-            map: auroraTex,
-            color: colors[b % colors.length],
+    const count = 4;
+    for (let i = 0; i < count; i++) {
+        const geo = new THREE.CylinderGeometry(150 + i * 10, 150 + i * 10, 80, 64, 1, true);
+        const mat = new THREE.ShaderMaterial({
+            uniforms: THREE.UniformsUtils.clone(auroraShader.uniforms),
+            vertexShader: auroraShader.vertexShader,
+            fragmentShader: auroraShader.fragmentShader,
             transparent: true,
-            opacity: 0.0, // Start invisible, fade in via anima
             blending: THREE.AdditiveBlending,
+            side: THREE.BackSide,
             depthWrite: false
         });
-
-        const sprite = new THREE.Sprite(mat);
         
-        // Position them in a wide arc
-        const angle = (b / bandCount) * Math.PI - Math.PI/2;
-        const radius = 150 + Math.random() * 50;
-        sprite.position.set(
-            Math.sin(angle) * radius,
-            20 + Math.random() * 40,
-            -180 - Math.random() * 50
-        );
+        // Randomize colors slightly for each layer
+        mat.uniforms.uColor1.value.setHSL(0.45 + Math.random() * 0.1, 0.8, 0.5);
+        mat.uniforms.uColor2.value.setHSL(0.3 + Math.random() * 0.1, 0.8, 0.5);
+        mat.uniforms.uColor3.value.setHSL(0.75 + Math.random() * 0.1, 0.8, 0.5);
         
-        sprite.scale.set(60 + Math.random() * 40, 100 + Math.random() * 50, 1);
-        
-        // Animation metadata
-        sprite.userData = {
-            baseOpacity: 0.05 + Math.random() * 0.1,
-            speed: 0.2 + Math.random() * 0.3,
-            phase: Math.random() * Math.PI * 2,
-            driftX: (Math.random() - 0.5) * 0.1,
-            driftY: (Math.random() - 0.5) * 0.05
-        };
-
-        group.add(sprite);
-        auroraBands.push(sprite);
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.y = 20;
+        mesh.rotation.z = Math.random() * 0.2;
+        group.add(mesh);
     }
     introScene.add(group);
 }
 
-function makeAuroraMistTexture() {
+function createCosmicBackground() {
+    // Large sphere for a nebula background
+    const geo = new THREE.SphereGeometry(450, 32, 32);
     const canvas = document.createElement("canvas");
-    canvas.width = 128;
-    canvas.height = 256;
+    canvas.width = canvas.height = 512;
     const ctx = canvas.getContext("2d");
     
-    const grad = ctx.createLinearGradient(0, 256, 0, 0);
-    grad.addColorStop(0, "rgba(255, 255, 255, 0)");
-    grad.addColorStop(0.2, "rgba(255, 255, 255, 0.2)");
-    grad.addColorStop(0.5, "rgba(255, 255, 255, 0.4)");
-    grad.addColorStop(0.8, "rgba(255, 255, 255, 0.1)");
-    grad.addColorStop(1, "rgba(255, 255, 255, 0)");
+    // Base space color
+    ctx.fillStyle = "#020815";
+    ctx.fillRect(0, 0, 512, 512);
     
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 128, 256);
-    
-    // Add some organic noise/softness
-    for(let i=0; i<10; i++) {
-        ctx.filter = "blur(10px)";
-        ctx.fillStyle = "rgba(255,255,255,0.05)";
-        ctx.beginPath();
-        ctx.ellipse(Math.random()*128, Math.random()*256, 20, 50, Math.random()*Math.PI, 0, Math.PI*2);
-        ctx.fill();
+    // Add multiple nebulas
+    for(let i=0; i<8; i++) {
+        const x = Math.random() * 512, y = Math.random() * 512, r = 100 + Math.random() * 200;
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+        const h = Math.random() > 0.5 ? 200 : 280; // Blue or Purple
+        grad.addColorStop(0, `hsla(${h}, 70%, 30%, 0.15)`);
+        grad.addColorStop(1, "transparent");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 512, 512);
     }
     
-    return new THREE.CanvasTexture(canvas);
+    const tex = new THREE.CanvasTexture(canvas);
+    const mat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, depthWrite: false });
+    const bg = new THREE.Mesh(geo, mat);
+    introScene.add(bg);
 }
 
 function createCustomConstellation() {
     const group = new THREE.Group();
+    window.starsGroup = group;
     
     // VIRGO (approx points)
     const virgoStars = [
@@ -286,20 +333,22 @@ function introAnimate() {
     introCamera.position.y = Math.cos(t * 0.1) * 5;
     introCamera.lookAt(0, 0, -100);
 
-    // Animate Aurora (Ethereal Mist)
-    auroraBands.forEach((sprite) => {
-        const ud = sprite.userData;
-        const pulse = Math.sin(t * ud.speed + ud.phase);
-        sprite.material.opacity = ud.baseOpacity * (0.7 + 0.3 * pulse);
-        
-        // Subtle drift
-        sprite.position.x += ud.driftX;
-        sprite.position.y += ud.driftY;
-        
-        // Wrap around drift
-        if (Math.abs(sprite.position.x) > 300) sprite.position.x *= -0.9;
-        if (Math.abs(sprite.position.y) > 100) sprite.position.y *= -0.9;
+    // Animate Aurora Shaders
+    introScene.traverse(obj => {
+        if (obj.material && obj.material.uniforms && obj.material.uniforms.uTime) {
+            obj.material.uniforms.uTime.value = t;
+        }
     });
+
+    // Pulse Constellation Stars
+    if (window.starsGroup) {
+        window.starsGroup.children.forEach((star, i) => {
+            if (star instanceof THREE.Mesh) {
+                const s = 1 + Math.sin(t * 2 + i) * 0.2;
+                star.scale.set(s, s, s);
+            }
+        });
+    }
 
     if (snowParticles) {
         const pa = snowParticles.geometry.attributes.position;
