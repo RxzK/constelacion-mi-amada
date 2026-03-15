@@ -128,7 +128,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 17.0.0 (Crystal Fix)";
+        vTag.textContent = "VER: 18.0.0 (Perfect Sky)";
 
         introActive = true;
 
@@ -220,50 +220,47 @@ function createSpectacularAurora() {
 
 function createCosmicBackground() {
     // Large sphere for a nebula background
-    const geo = new THREE.SphereGeometry(480, 32, 32);
+    const geo = new THREE.SphereGeometry(480, 48, 48); // Smoother sphere
     const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = 1024; // Higher res
+    canvas.width = canvas.height = 2048; // ULTRA HIGH RES
     const ctx = canvas.getContext("2d");
     
     // Base space color
     ctx.fillStyle = "#010308";
-    ctx.fillRect(0, 0, 1024, 1024);
+    ctx.fillRect(0, 0, 2048, 2048);
 
-    // Galactic Plane (Milky Way Band)
-    const galacticGrad = ctx.createLinearGradient(0, 0, 1024, 1024);
+    // Galactic Plane (Milky Way Band) - Soft and Broad
+    const galacticGrad = ctx.createLinearGradient(0, 0, 2048, 2048);
     galacticGrad.addColorStop(0, "rgba(2, 6, 15, 0)");
-    galacticGrad.addColorStop(0.5, "rgba(40, 60, 100, 0.12)");
+    galacticGrad.addColorStop(0.5, "rgba(40, 65, 120, 0.15)");
     galacticGrad.addColorStop(1, "rgba(2, 6, 15, 0)");
     ctx.fillStyle = galacticGrad;
-    ctx.fillRect(0, 0, 1024, 1024);
+    ctx.fillRect(0, 0, 2048, 2048);
     
-    // Add subtle, high-quality nebulas with noise to prevent banding
-    for(let i=0; i<15; i++) {
-        const x = Math.random() * 1024, y = Math.random() * 1024, r = 100 + Math.random() * 400;
+    // Add subtle, organic nebulas with CANVAS BLUR
+    ctx.filter = 'blur(120px)'; // EPIC SMOOTHNESS
+    for(let i=0; i<18; i++) {
+        const x = Math.random() * 2048, y = Math.random() * 2048, r = 200 + Math.random() * 600;
         const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-        const h = Math.random() > 0.5 ? 210 : 270; 
-        grad.addColorStop(0, `hsla(${h}, 60%, 25%, 0.15)`);
+        const h = 200 + Math.random() * 80; // Blue to Purple
+        grad.addColorStop(0, `hsla(${h}, 50%, 25%, 0.12)`);
         grad.addColorStop(1, "transparent");
         ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, 1024, 1024);
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
     }
+    ctx.filter = 'none';
 
-    // Add film-grain noise to the canvas to BREAK BANDING
-    const imgData = ctx.getImageData(0, 0, 1024, 1024);
-    for (let i = 0; i < imgData.data.length; i += 4) {
-        const noise = (Math.random() - 0.5) * 4;
-        imgData.data[i] += noise;
-        imgData.data[i+1] += noise;
-        imgData.data[i+2] += noise;
-    }
-    ctx.putImageData(imgData, 0, 0);
+    // REMOVED: Manual noise loop that caused 'plasticine/grid' artifacts
     
     const tex = new THREE.CanvasTexture(canvas);
+    tex.anisotropy = 4; // Better texture filtering
     const mat = new THREE.MeshBasicMaterial({ 
         map: tex, 
         side: THREE.BackSide, 
         depthWrite: false,
-        dithering: true // CRITICAL: Fixes banding
+        dithering: true 
     });
     const bg = new THREE.Mesh(geo, mat);
     introScene.add(bg);
@@ -468,10 +465,10 @@ function createPremiumSnow() {
     }
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     snowParticles = new THREE.Points(geo, new THREE.PointsMaterial({ 
-        size: 1.2, // Larger but soft
+        size: 1.5,
         map: starTex,
         transparent: true, 
-        opacity: 0.6, 
+        opacity: 0.4, 
         sizeAttenuation: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending
@@ -490,10 +487,10 @@ function createCosmicGlitter() {
     }
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     cosmicDust = new THREE.Points(geo, new THREE.PointsMaterial({ 
-        size: 2.0, // Larger but soft
+        size: 2.2,
         map: starTex,
         transparent: true, 
-        opacity: 0.3, 
+        opacity: 0.25, 
         blending: THREE.AdditiveBlending,
         sizeAttenuation: true,
         depthWrite: false
