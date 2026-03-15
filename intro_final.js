@@ -66,25 +66,25 @@ const auroraShader = {
             float n = fbm(uv * vec2(1.5, 0.8) + vec2(t, 0.0));
             float n2 = fbm(uv * vec2(3.0, 1.5) - vec2(t * 0.5, n));
             
-            float aurora = smoothstep(0.2, 0.8, n * n2 * 1.5);
+            float aurora = smoothstep(0.2, 0.8, n * n2 * 1.3); // Slightly reduced multiplier
             
-            // Vertical rays with higher frequency smooth noise
-            float rays = pow(noise(vec2(uv.x * 25.0, t * 0.05)), 4.0) * 0.7;
+            // Vertical rays with lower intensity
+            float rays = pow(noise(vec2(uv.x * 25.0, t * 0.05)), 4.0) * 0.5; // Reduced from 0.7
             aurora += rays * smoothstep(0.0, 0.4, uv.y) * smoothstep(1.0, 0.6, uv.y);
             
-            // Rich, spectacular color mapping (Emerald Green, Deep Cyan, Royal Purple)
-            vec3 vColor1 = vec3(0.0, 1.0, 0.8); // Emerald
-            vec3 vColor2 = vec3(0.0, 0.6, 1.0); // Cyan
-            vec3 vColor3 = vec3(0.6, 0.2, 1.0); // Purple
+            // Richer, deeper color mapping to avoid white-out
+            vec3 vColor1 = vec3(0.0, 0.8, 0.6); // Deeper Emerald
+            vec3 vColor2 = vec3(0.0, 0.4, 0.8); // Deeper Cyan
+            vec3 vColor3 = vec3(0.4, 0.1, 0.8); // Deeper Purple
             
             vec3 color = mix(vColor1, vColor2, n);
             color = mix(color, vColor3, n2);
             
-            // Soft edge fading for non-geometric feel
+            // Soft edge fading
             float fade = smoothstep(0.0, 0.4, uv.y) * smoothstep(1.0, 0.8, uv.y);
             fade *= smoothstep(0.0, 0.2, uv.x) * smoothstep(1.0, 0.8, uv.x);
             
-            gl_FragColor = vec4(color, aurora * fade * 0.9);
+            gl_FragColor = vec4(color, aurora * fade * 0.75); // Reduced from 0.9
         }
     `
 };
@@ -128,7 +128,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 13.0.0 (Spectacular)";
+        vTag.textContent = "VER: 14.0.0 (Harmony)";
 
         introActive = true;
 
@@ -162,9 +162,9 @@ window.initIntroScene = function () {
         createCustomConstellation();
         initIglooInteraction();
 
-        // 5. POST-PROCESSING (Creamy Bloom)
+        // 5. POST-PROCESSING (Balanced Bloom)
         const renderPass = new RenderPass(introScene, introCamera);
-        introBloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.8, 0.6, 0.7);
+        introBloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.1, 0.5, 0.8);
         introComposer = new EffectComposer(introRenderer);
         introComposer.addPass(renderPass);
         introComposer.addPass(introBloom);
@@ -223,16 +223,24 @@ function createCosmicBackground() {
     canvas.width = canvas.height = 1024; // Higher res
     const ctx = canvas.getContext("2d");
     
-    // Deeper space color
-    ctx.fillStyle = "#01040a";
+    // Base space color
+    ctx.fillStyle = "#010308";
+    ctx.fillRect(0, 0, 1024, 1024);
+
+    // Galactic Plane (Milky Way Band)
+    const galacticGrad = ctx.createLinearGradient(0, 0, 1024, 1024);
+    galacticGrad.addColorStop(0, "rgba(2, 6, 15, 0)");
+    galacticGrad.addColorStop(0.5, "rgba(40, 60, 100, 0.08)");
+    galacticGrad.addColorStop(1, "rgba(2, 6, 15, 0)");
+    ctx.fillStyle = galacticGrad;
     ctx.fillRect(0, 0, 1024, 1024);
     
-    // Add much more subtle nebulas
-    for(let i=0; i<6; i++) {
-        const x = Math.random() * 1024, y = Math.random() * 1024, r = 200 + Math.random() * 400;
+    // Add subtle, high-quality nebulas
+    for(let i=0; i<12; i++) {
+        const x = Math.random() * 1024, y = Math.random() * 1024, r = 150 + Math.random() * 350;
         const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-        const h = Math.random() > 0.5 ? 220 : 260; // Deeper Blues/Purples
-        grad.addColorStop(0, `hsla(${h}, 50%, 15%, 0.1)`);
+        const h = Math.random() > 0.5 ? 210 : 270; 
+        grad.addColorStop(0, `hsla(${h}, 60%, 20%, 0.12)`);
         grad.addColorStop(1, "transparent");
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, 1024, 1024);
