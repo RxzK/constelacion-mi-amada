@@ -138,7 +138,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 35.0.0 (Celestial Energy)";
+        vTag.textContent = "VER: 36.0.0 (The Cinematic Star Journey)";
 
         introActive = true;
 
@@ -679,12 +679,69 @@ function makeSoftStarTexture() {
 
 window.triggerIntroTransition = function (callback) {
     if (!introActive) return;
-    introActive = false; 
-    cancelAnimationFrame(introAnimId);
     
-    // Smooth camera fly-through
-    gsap.to(introCamera.position, { z: -300, duration: 4, ease: "power3.in" });
-    gsap.to("#intro-whiteout", { opacity: 1, duration: 2.5, delay: 1, onComplete: callback });
+    // Fade out main UI early
+    const overlay = document.getElementById('intro-overlay');
+    if(overlay) overlay.style.opacity = '0';
+    
+    // Cleanup labels
+    celestialLabels.forEach(label => {
+        label.element.style.opacity = '0';
+    });
+
+    const cinematicLayer = document.getElementById('cinematic-layer');
+    const cinematicText = document.getElementById('cinematic-text');
+    cinematicLayer.classList.remove('hidden');
+    
+    // Use GSAP Timeline for the Epic Journey
+    const tl = gsap.timeline({
+        onComplete: () => {
+            introActive = false; 
+            cancelAnimationFrame(introAnimId);
+            gsap.to("#intro-whiteout", { opacity: 1, duration: 2.5, onComplete: callback });
+        }
+    });
+
+    // We will fly the camera and the lookAt target.
+    // Create a dummy object to animate the lookAt target
+    const lookTarget = new THREE.Vector3(0, 0, -100);
+
+    // Stop manual parallax tracking
+    mouseX = 0; mouseY = 0;
+
+    const showText = (title, body) => {
+        cinematicLayer.style.opacity = '1';
+        cinematicText.innerHTML = `<span class="highlight">${title}</span>${body}`;
+        cinematicText.classList.add('visible');
+    };
+    const hideText = () => {
+        cinematicText.classList.remove('visible');
+        cinematicLayer.style.opacity = '0';
+    };
+
+    // WAYPOINT 1: SPICA (Virgo - Karla)
+    tl.to(introCamera.position, { x: -60, y: 35, z: -70, duration: 4, ease: "power2.inOut" }, 0)
+      .to(lookTarget, { x: -60, y: 45, z: -95, duration: 4, ease: "power2.inOut", onUpdate: () => introCamera.lookAt(lookTarget) }, 0)
+      .call(() => showText("SPICA (El corazón de Virgo)", "Eres mi luz dorada. La chispa brillante que nutre mi vida y hace florecer todo mi mundo."))
+      .to(introBloom, { strength: 1.8, duration: 2, yoyo: true, repeat: 1 }, "+=0") // Pulse star
+      .call(hideText, null, "+=4"); // Wait 4s to read
+
+    // WAYPOINT 2: ZUBENESCHAMALI (Libra - Tú)
+    tl.to(introCamera.position, { x: 55, y: 25, z: -75, duration: 4, ease: "power2.inOut" }, "+=1")
+      .to(lookTarget, { x: 55, y: 35, z: -100, duration: 4, ease: "power2.inOut", onUpdate: () => introCamera.lookAt(lookTarget) }, "-=4")
+      .call(() => showText("ZUBENESCHAMALI (El alma de Libra)", "Y yo prometo ser siempre tu equilibrio. Tu pilar de paz, tu balanza y tu refugio infinito."))
+      .to(introBloom, { strength: 1.8, duration: 2, yoyo: true, repeat: 1 }, "+=0") // Pulse star
+      .call(hideText, null, "+=4.5"); // Wait 4.5s to read
+
+    // WAYPOINT 3: THE HEART OF THE UNION (Center)
+    tl.to(introCamera.position, { x: 0, y: -20, z: -60, duration: 5, ease: "power3.inOut" }, "+=1")
+      .to(lookTarget, { x: 0, y: -5, z: -92.5, duration: 5, ease: "power3.inOut", onUpdate: () => introCamera.lookAt(lookTarget) }, "-=5")
+      .call(() => showText("NUESTRA UNIÓN (20 de Marzo)", "Dos destinos, dos estrellas, fundiéndose para crear el universo más hermoso de todos."))
+      
+    // FINAL WARP: Dive into the Union Star
+    tl.to(introBloom, { strength: 8, radius: 2.0, duration: 4, ease: "power2.in" }, "+=3")
+      .to(introCamera.position, { z: -85, duration: 4, ease: "power3.in" }, "-=4")
+      .call(hideText, null, "-=2");
 };
 
 function createPremiumSnow() {
