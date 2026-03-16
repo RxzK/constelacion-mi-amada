@@ -128,7 +128,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 23.0.0 (Celestial Story)";
+        vTag.textContent = "VER: 24.0.0 (Crystal Legend)";
 
         introActive = true;
 
@@ -367,62 +367,69 @@ function createCustomConstellation() {
     group.add(lines);
     group.scale.set(1.2, 1.2, 1.2); // Global scale boost
 
-    // --- CELESTIAL IDENTITY LABELS ---
+    // --- CELESTIAL IDENTITY LABELS (REPOSITIONED & UPSCALED) ---
     // Virgo Label
-    const virgoLabel = createCelestialLabel("Virgo (Tu Corazón)", "23 Ago - 22 Sep");
-    virgoLabel.position.set(-30, 60, -100);
+    const virgoLabel = createCelestialLabel("TU CORAZÓN (VIRGO)", "23 Ago - 22 Sep");
+    virgoLabel.position.set(-35, 10, -95); // Closer and slightly forward
     group.add(virgoLabel);
 
     // Libra Label
-    const libraLabel = createCelestialLabel("Libra (Su Alma)", "23 Sep - 22 Oct");
-    libraLabel.position.set(20, 45, -105);
+    const libraLabel = createCelestialLabel("SU ALMA (LIBRA)", "23 Sep - 22 Oct");
+    libraLabel.position.set(25, 0, -100); // Near Zubenelgenubi area
     group.add(libraLabel);
 
-    // UNION BRIDGE LABEL (March 20, 2026)
-    const unionLabel = createCelestialLabel("Nuestra Unión", "Viernes, 20 de Marzo 2026", "#ffd700"); // Gold highlight
-    unionLabel.position.set(-10, -30, -102);
+    // UNION BRIDGE LABEL (March 20, 2026) - The Centerpiece
+    const unionLabel = createCelestialLabel("NUESTRA UNIÓN", "Viernes, 20 de Marzo 2026", "#ffd700"); 
+    unionLabel.position.set(-10, -50, -90); // Dominant bottom center position
     group.add(unionLabel);
 
     introScene.add(group);
 }
 
-function createCelestialLabel(title, subtitle, color = "#aaddff") {
+function createCelestialLabel(title, subtitle, color = "#ffffff") {
     const canvas = document.createElement("canvas");
     canvas.width = 1024;
-    canvas.height = 256;
+    canvas.height = 320; // Taller for better spacing
     const ctx = canvas.getContext("2d");
 
-    // Title
-    ctx.font = "bold 64px 'Outfit', sans-serif";
+    // Clear background (Ensure transparency)
+    ctx.clearRect(0,0,1024,320);
+
+    // Title Refined
+    ctx.font = "bold 72px 'Outfit', sans-serif";
     ctx.fillStyle = color;
     ctx.textAlign = "center";
+    
+    // Harder shadow for extreme contrast
     ctx.shadowBlur = 20;
-    ctx.shadowColor = "rgba(0,0,0,0.8)"; // Edge contrast
-    ctx.fillText(title, 512, 100);
+    ctx.shadowColor = "rgba(0,0,0,1)"; 
+    ctx.fillText(title, 512, 120);
 
-    // Glow Effect for Title
-    ctx.shadowBlur = 10;
+    // Beautiful Glow
+    ctx.shadowBlur = 15;
     ctx.shadowColor = color;
-    ctx.fillText(title, 512, 100);
+    ctx.fillText(title, 512, 120);
 
-    // Subtitle
-    ctx.font = "300 42px 'Outfit', sans-serif";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-    ctx.shadowBlur = 0;
-    ctx.fillText(subtitle, 512, 180);
+    // Subtitle Refined
+    ctx.font = "400 38px 'Outfit', sans-serif";
+    ctx.fillStyle = "rgba(200, 230, 255, 0.9)";
+    ctx.shadowBlur = 5;
+    ctx.shadowColor = "black";
+    ctx.fillText(subtitle, 512, 200);
 
     const tex = new THREE.CanvasTexture(canvas);
+    tex.minFilter = THREE.LinearFilter;
     const mat = new THREE.SpriteMaterial({ 
         map: tex, 
         transparent: true, 
-        opacity: 0, // Initial opacity for fade-in
-        blending: THREE.AdditiveBlending 
+        opacity: 0, 
+        blending: THREE.NormalBlending // Normal blending for better text visibility
     });
     const sprite = new THREE.Sprite(mat);
-    sprite.scale.set(40, 10, 1);
+    sprite.scale.set(65, 20, 1); // BIGGER for clarity
     
-    // Fade in
-    gsap.to(mat, { opacity: 0.9, duration: 3, delay: 2, ease: "power2.out" });
+    // Fade in with GSAP
+    gsap.to(mat, { opacity: 1, duration: 4, delay: 2.5, ease: "sine.inOut" });
     
     return sprite;
 }
