@@ -138,7 +138,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 34.0.0 (Grand Restoration)";
+        vTag.textContent = "VER: 35.0.0 (Celestial Energy)";
 
         introActive = true;
 
@@ -384,61 +384,69 @@ function createCustomConstellation() {
     });
     lineGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(linePos), 3));
     const lines = new THREE.LineSegments(lineGeo, lineMat);
-    lines.material.opacity = 0.4;
+    lines.material.opacity = 0.8; // MORE VIBRANT (V35)
+    lines.material.blending = THREE.AdditiveBlending; 
     group.add(lines);
-    group.scale.set(1.8, 1.8, 1.8); // MONUMENTAL SCALE (V33)
+    group.scale.set(1.8, 1.8, 1.8); 
 
-    // --- CELESTIAL LANDMARKS (V33: GRAND IDENTITY & UNION) ---
+    // --- CELESTIAL LANDMARKS (V35: GRAND IDENTITY & CURVED UNION) ---
     // Virgo Label (Tú)
-    addCelestialLabelHTML("6 de Septiembre", "VIRGO · EL LATIDO DE TU CORAZÓN", new THREE.Vector3(-60, 45, -95));
+    const vPos = new THREE.Vector3(-60, 45, -95);
+    addCelestialLabelHTML("6 de Septiembre", "VIRGO · EL LATIDO DE TU CORAZÓN", vPos);
     
     // Libra Label (Ella)
-    addCelestialLabelHTML("11 de Octubre", "LIBRA · LA ESENCIA DE SU ALMA", new THREE.Vector3(55, 35, -100));
+    const lPos = new THREE.Vector3(55, 35, -100);
+    addCelestialLabelHTML("11 de Octubre", "LIBRA · LA ESENCIA DE SU ALMA", lPos);
     
-    // THE SACRED UNION (March 20) - The Centerpiece
+    // THE SACRED UNION (March 20)
     addCelestialLabelHTML("NUESTRA UNIÓN", "20 de Marzo", new THREE.Vector3(0, -35, -90), "union");
 
-    // --- THE UNION BRIDGE & STAR (V33: VISUAL FIXES) ---
-    const bridgeGeom = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(-45, 15, -95), 
-        new THREE.Vector3(0, -5, -92.5), 
-        new THREE.Vector3(45, 10, -100)  
-    ]);
-    const bridgeMat = new THREE.LineBasicMaterial({ 
+    // --- THE SACRED CURVE (V35: NO MORE BASIC LINES) ---
+    // Create a smooth curve connecting the two hearts
+    const curveControl = new THREE.Vector3(0, 10, -90); // The "Apex" point
+    const unionCurve = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(vPos.x + 10, vPos.y - 10, vPos.z), 
+        curveControl, 
+        new THREE.Vector3(lPos.x - 10, lPos.y - 10, lPos.z)
+    );
+
+    const curvePoints = unionCurve.getPoints(50);
+    const curveGeom = new THREE.BufferGeometry().setFromPoints(curvePoints);
+    const curveMat = new THREE.LineBasicMaterial({ 
         color: 0xffd700, 
         transparent: true, 
-        opacity: 0.4, 
+        opacity: 0.6, 
         blending: THREE.AdditiveBlending 
     });
-    const bridgeLine = new THREE.Line(bridgeGeom, bridgeMat);
-    group.add(bridgeLine);
+    const curveLine = new THREE.Line(curveGeom, curveMat);
+    group.add(curveLine);
 
-    // THE HEART OF THE UNION STAR (FIXED: NO BLACK BOX)
+    // THE HEART OF THE UNION STAR (Positioned on the Apex)
     const unionHeart = new THREE.Mesh(
-        new THREE.SphereGeometry(1.2, 16, 16),
+        new THREE.SphereGeometry(1.5, 16, 16),
         new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 })
     );
-    unionHeart.position.set(0, -5, -92.5);
+    unionHeart.position.copy(curveControl);
     
-    // Layered Glow System (V33)
+    // Layered Glow System
     const heartGlow = new THREE.Sprite(new THREE.SpriteMaterial({
         map: makeBetterGlowTexture('#ffd700'),
         transparent: true,
         opacity: 0.8,
         blending: THREE.AdditiveBlending,
-        depthWrite: false // CRITICAL: Fixes black box artifacts
+        depthWrite: false
     }));
-    heartGlow.scale.set(15, 15, 1);
+    heartGlow.scale.set(20, 20, 1);
     unionHeart.add(heartGlow);
     
     const coreGlow = new THREE.Sprite(new THREE.SpriteMaterial({
         map: makeBetterGlowTexture('#ffffff'),
         transparent: true,
-        opacity: 0.5,
+        opacity: 0.7,
         blending: THREE.AdditiveBlending,
         depthWrite: false
     }));
-    coreGlow.scale.set(6, 6, 1);
+    coreGlow.scale.set(8, 8, 1);
     unionHeart.add(coreGlow);
 
     group.add(unionHeart);
