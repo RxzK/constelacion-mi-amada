@@ -138,7 +138,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 37.3.1 (Hotfix: Black Screen)";
+        vTag.textContent = "VER: 37.4.0 (Unified Cinematic Flow)";
 
         introActive = true;
         window.cinematicActive = false; // Declared on window for global access
@@ -591,12 +591,8 @@ function initIglooInteraction() {
 }
 
 function triggerTransition() {
-    // Elegant bloom flash, not blinding
-    gsap.to(introBloom, { strength: 12, radius: 1.5, duration: 2.5, ease: "power2.inOut" });
-    gsap.to(starsGroup.scale, { x: 1.5, y: 1.5, z: 1.5, duration: 3, ease: "power2.inOut" });
-    setTimeout(() => { 
-        if (window.triggerIntroTransition) window.triggerIntroTransition(); 
-    }, 2000);
+    // Redundant scaling removed to avoid "double animation"
+    if (window.triggerIntroTransition) window.triggerIntroTransition(); 
 }
 
 function introAnimate() {
@@ -709,6 +705,9 @@ window.triggerIntroTransition = function (callback) {
             callback(); // The transition whiteout overlaps this perfectly
         }
     });
+
+    // START with the unified bloom pulse
+    tl.to(introBloom, { strength: 12, radius: 1.5, duration: 2, ease: "power2.inOut" }, 0);
 
     // We will fly the camera and the lookAt target.
     const lookTarget = new THREE.Vector3(0, 0, -100);
