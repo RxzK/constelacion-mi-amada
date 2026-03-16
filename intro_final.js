@@ -128,7 +128,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 24.0.0 (Crystal Legend)";
+        vTag.textContent = "VER: 25.0.0 (Master Legend)";
 
         introActive = true;
 
@@ -367,20 +367,20 @@ function createCustomConstellation() {
     group.add(lines);
     group.scale.set(1.2, 1.2, 1.2); // Global scale boost
 
-    // --- CELESTIAL IDENTITY LABELS (REPOSITIONED & UPSCALED) ---
+    // --- CELESTIAL IDENTITY LABELS (V25: FIXED TRANSPARENCY & RATIO) ---
     // Virgo Label
     const virgoLabel = createCelestialLabel("TU CORAZÓN (VIRGO)", "23 Ago - 22 Sep");
-    virgoLabel.position.set(-35, 10, -95); // Closer and slightly forward
+    virgoLabel.position.set(-45, 15, -95); // Shifted further left to declutter
     group.add(virgoLabel);
 
     // Libra Label
     const libraLabel = createCelestialLabel("SU ALMA (LIBRA)", "23 Sep - 22 Oct");
-    libraLabel.position.set(25, 0, -100); // Near Zubenelgenubi area
+    libraLabel.position.set(35, 5, -100); // Shifted further right
     group.add(libraLabel);
 
     // UNION BRIDGE LABEL (March 20, 2026) - The Centerpiece
-    const unionLabel = createCelestialLabel("NUESTRA UNIÓN", "Viernes, 20 de Marzo 2026", "#ffd700"); 
-    unionLabel.position.set(-10, -50, -90); // Dominant bottom center position
+    const unionLabel = createCelestialLabel("NUESTRA UNIÓN", "20 de Marzo 2026", "#ffd700"); 
+    unionLabel.position.set(-5, -65, -85); // Centered and clear
     group.add(unionLabel);
 
     introScene.add(group);
@@ -389,47 +389,39 @@ function createCustomConstellation() {
 function createCelestialLabel(title, subtitle, color = "#ffffff") {
     const canvas = document.createElement("canvas");
     canvas.width = 1024;
-    canvas.height = 320; // Taller for better spacing
+    canvas.height = 256; // 4:1 Ratio
     const ctx = canvas.getContext("2d");
 
-    // Clear background (Ensure transparency)
-    ctx.clearRect(0,0,1024,320);
+    ctx.clearRect(0, 0, 1024, 256);
 
-    // Title Refined
-    ctx.font = "bold 72px 'Outfit', sans-serif";
+    // Title 
+    ctx.font = "bold 70px 'Outfit', sans-serif";
     ctx.fillStyle = color;
     ctx.textAlign = "center";
-    
-    // Harder shadow for extreme contrast
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = "rgba(0,0,0,1)"; 
-    ctx.fillText(title, 512, 120);
-
-    // Beautiful Glow
     ctx.shadowBlur = 15;
     ctx.shadowColor = color;
-    ctx.fillText(title, 512, 120);
+    ctx.fillText(title, 512, 110);
 
-    // Subtitle Refined
-    ctx.font = "400 38px 'Outfit', sans-serif";
-    ctx.fillStyle = "rgba(200, 230, 255, 0.9)";
-    ctx.shadowBlur = 5;
-    ctx.shadowColor = "black";
-    ctx.fillText(subtitle, 512, 200);
+    // Subtitle
+    ctx.font = "300 36px 'Outfit', sans-serif";
+    ctx.fillStyle = "rgba(200, 230, 255, 0.85)";
+    ctx.shadowBlur = 0;
+    ctx.fillText(subtitle, 512, 185);
 
     const tex = new THREE.CanvasTexture(canvas);
-    tex.minFilter = THREE.LinearFilter;
     const mat = new THREE.SpriteMaterial({ 
         map: tex, 
         transparent: true, 
         opacity: 0, 
-        blending: THREE.NormalBlending // Normal blending for better text visibility
+        blending: THREE.AdditiveBlending, // KEY FIX: Removes black boxes
+        depthWrite: false
     });
     const sprite = new THREE.Sprite(mat);
-    sprite.scale.set(65, 20, 1); // BIGGER for clarity
+    // Correct scale to match 4:1 aspect ratio (avoiding distortion)
+    sprite.scale.set(60, 15, 1); 
     
     // Fade in with GSAP
-    gsap.to(mat, { opacity: 1, duration: 4, delay: 2.5, ease: "sine.inOut" });
+    gsap.to(mat, { opacity: 0.95, duration: 4, delay: 3, ease: "sine.inOut" });
     
     return sprite;
 }
