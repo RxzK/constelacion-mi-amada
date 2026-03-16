@@ -113,6 +113,7 @@ const fbm = (x, y, oct = 6) => {
 // --- SCENE GLOBALS ---
 let introRenderer, introScene, introCamera, introComposer, introBloom;
 let iglooGroup, snowParticles, cosmicDust, shootingStars = [], introActive = true, introAnimId;
+let celestialLabels = []; // Tracker for HTML labels
 const introClock = { t: 0 };
 
 window.initIntroScene = function () {
@@ -128,7 +129,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 25.0.0 (Master Legend)";
+        vTag.textContent = "VER: 26.0.0 (Universal Clarity)";
 
         introActive = true;
 
@@ -365,65 +366,50 @@ function createCustomConstellation() {
     const lines = new THREE.LineSegments(lineGeo, lineMat);
     lines.material.opacity = 0.4;
     group.add(lines);
-    group.scale.set(1.2, 1.2, 1.2); // Global scale boost
+    group.scale.set(1.2, 1.2, 1.2); 
 
-    // --- CELESTIAL IDENTITY LABELS (V25: FIXED TRANSPARENCY & RATIO) ---
-    // Virgo Label
-    const virgoLabel = createCelestialLabel("TU CORAZÓN (VIRGO)", "23 Ago - 22 Sep");
-    virgoLabel.position.set(-45, 15, -95); // Shifted further left to declutter
-    group.add(virgoLabel);
-
-    // Libra Label
-    const libraLabel = createCelestialLabel("SU ALMA (LIBRA)", "23 Sep - 22 Oct");
-    libraLabel.position.set(35, 5, -100); // Shifted further right
-    group.add(libraLabel);
-
-    // UNION BRIDGE LABEL (March 20, 2026) - The Centerpiece
-    const unionLabel = createCelestialLabel("NUESTRA UNIÓN", "20 de Marzo 2026", "#ffd700"); 
-    unionLabel.position.set(-5, -65, -85); // Centered and clear
-    group.add(unionLabel);
+    // Define Celestial Landmarks (3D Positions)
+    addCelestialLabelHTML("TU CORAZÓN (VIRGO)", "23 Ago - 22 Sep", new THREE.Vector3(-45, 15, -95));
+    addCelestialLabelHTML("SU ALMA (LIBRA)", "23 Sep - 22 Oct", new THREE.Vector3(35, 5, -100));
+    addCelestialLabelHTML("NUESTRA UNIÓN", "20 de Marzo 2026", new THREE.Vector3(-5, -65, -85), "union");
 
     introScene.add(group);
 }
 
-function createCelestialLabel(title, subtitle, color = "#ffffff") {
-    const canvas = document.createElement("canvas");
-    canvas.width = 1024;
-    canvas.height = 256; // 4:1 Ratio
-    const ctx = canvas.getContext("2d");
+function addCelestialLabelHTML(title, subtitle, pos, type = "normal") {
+    const el = document.createElement("div");
+    el.className = `celestial-label ${type === 'union' ? 'celestial-union' : ''}`;
+    el.innerHTML = `
+        <div class="celestial-title">${title}</div>
+        <div class="celestial-subtitle">${subtitle}</div>
+    `;
+    document.body.appendChild(el);
+    
+    celestialLabels.push({ element: el, pos: pos });
+    
+    // Smooth fade in
+    setTimeout(() => el.classList.add('visible'), 3000);
+}
 
-    ctx.clearRect(0, 0, 1024, 256);
+function updateCelestialLabels() {
+    if (!introActive || !introCamera) return;
 
-    // Title 
-    ctx.font = "bold 70px 'Outfit', sans-serif";
-    ctx.fillStyle = color;
-    ctx.textAlign = "center";
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = color;
-    ctx.fillText(title, 512, 110);
+    celestialLabels.forEach(label => {
+        const vector = label.pos.clone();
+        vector.project(introCamera);
 
-    // Subtitle
-    ctx.font = "300 36px 'Outfit', sans-serif";
-    ctx.fillStyle = "rgba(200, 230, 255, 0.85)";
-    ctx.shadowBlur = 0;
-    ctx.fillText(subtitle, 512, 185);
+        const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+        const y = -(vector.y * 0.5 - 0.5) * window.innerHeight;
 
-    const tex = new THREE.CanvasTexture(canvas);
-    const mat = new THREE.SpriteMaterial({ 
-        map: tex, 
-        transparent: true, 
-        opacity: 0, 
-        blending: THREE.AdditiveBlending, // KEY FIX: Removes black boxes
-        depthWrite: false
+        // Hide if behind camera or out of bounds
+        if (vector.z > 1 || x < 0 || x > window.innerWidth || y < 0 || y > window.innerHeight) {
+            label.element.style.display = 'none';
+        } else {
+            label.element.style.display = 'block';
+            label.element.style.left = `${x}px`;
+            label.element.style.top = `${y}px`;
+        }
     });
-    const sprite = new THREE.Sprite(mat);
-    // Correct scale to match 4:1 aspect ratio (avoiding distortion)
-    sprite.scale.set(60, 15, 1); 
-    
-    // Fade in with GSAP
-    gsap.to(mat, { opacity: 0.95, duration: 4, delay: 3, ease: "sine.inOut" });
-    
-    return sprite;
 }
 
 function makeGlowTexture(color) {
@@ -518,6 +504,8 @@ function introAnimate() {
 
     if (introComposer) introComposer.render();
     else introRenderer.render(introScene, introCamera);
+    
+    updateCelestialLabels(); // Update HTML Overlay positions
 }
 
 function makeSoftStarTexture() {
