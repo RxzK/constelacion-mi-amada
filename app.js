@@ -274,47 +274,50 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
         return new THREE.CanvasTexture(canvas);
     }
 
-    /* ==== VOLUMETRIC NEBULA ==== */
+    /* ==== VOLUMETRIC NEBULA (PREMIUM) ==== */
     function createNebula() {
         const group = new THREE.Group();
-        const count = 45; // Fewer but larger sprites for volume
+        const count = 75; // Increased density
         
-        // Create a soft cloud-like radial gradient
-        const size = 256;
+        // Create a softer, wider cloud-like radial gradient
+        const size = 512;
         const c = document.createElement("canvas");
         c.width = c.height = size;
         const ctx = c.getContext("2d");
         const grad = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
-        grad.addColorStop(0, "rgba(255, 255, 255, 1)");
-        grad.addColorStop(0.4, "rgba(255, 255, 255, 0.4)");
+        grad.addColorStop(0, "rgba(255, 255, 255, 0.8)");
+        grad.addColorStop(0.3, "rgba(255, 255, 255, 0.3)");
         grad.addColorStop(1, "rgba(255, 255, 255, 0)");
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, size, size);
         const cloudTex = new THREE.CanvasTexture(c);
 
+        // Deep space colors matching the premium theme
         const nebulaColors = [
             0x00cfff, // cyan
-            0xc97fff, // violet
-            0xff6eb4, // pink
-            0x25e0c5  // teal
+            0x25e0c5, // teal/emerald
+            0x1a237e, // deep blue
+            0x31004a, // deep purple
+            0xffd700  // rare golden accents
         ];
 
         for (let i = 0; i < count; i++) {
             const color = nebulaColors[Math.floor(Math.random() * nebulaColors.length)];
+            const opacity = color === 0xffd700 ? 0.05 : 0.15; // Gold is subtler
             const mat = new THREE.SpriteMaterial({
                 map: cloudTex, color: color,
-                transparent: true, opacity: 0.12,
+                transparent: true, opacity: opacity,
                 blending: THREE.AdditiveBlending, depthWrite: false
             });
             const sprite = new THREE.Sprite(mat);
             
-            // Random positions spread out
-            sprite.position.x = (Math.random() - 0.5) * 40;
-            sprite.position.y = (Math.random() - 0.5) * 30;
-            sprite.position.z = (Math.random() - 0.5) * 20 - 5;
+            // Random positions spread out further for depth
+            sprite.position.x = (Math.random() - 0.5) * 60;
+            sprite.position.y = (Math.random() - 0.5) * 40;
+            sprite.position.z = (Math.random() - 0.5) * 30 - 15;
             
             // Huge scale for volume
-            const scale = 15 + Math.random() * 20;
+            const scale = 25 + Math.random() * 30;
             sprite.scale.set(scale, scale, 1);
             
             group.add(sprite);
@@ -322,27 +325,27 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
         return group;
     }
 
-    /* ==== MEMORY STAR (CRYSTALLINE) ==== */
+    /* ==== MEMORY STAR (PREMIUM CRYSTALLINE) ==== */
     function createMemoryStar(mem) {
         const group = new THREE.Group();
         group.position.set(mem.position.x, mem.position.y, mem.position.z);
 
         const hexColor = new THREE.Color(mem.color);
 
-        // Core Glowing Crystal
-        const coreGeo = new THREE.IcosahedronGeometry(mem.size * 0.7, 0);
-        const coreMat = new THREE.MeshBasicMaterial({ color: hexColor });
+        // Core Glowing Crystal (Sharper)
+        const coreGeo = new THREE.IcosahedronGeometry(mem.size * 0.5, 0);
+        const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
         const core = new THREE.Mesh(coreGeo, coreMat);
         group.add(core);
 
-        // Outer Glass Shell
-        const shellGeo = new THREE.IcosahedronGeometry(mem.size * 1.1, 1);
+        // Outer Glass Shell (More ethereal)
+        const shellGeo = new THREE.IcosahedronGeometry(mem.size * 1.2, 1);
         const shellMat = new THREE.MeshPhysicalMaterial({
-            color: 0xffffff,
-            metalness: 0.1,
-            roughness: 0.2,
-            transmission: 0.95, // Glass-like transparency
-            ior: 1.5,
+            color: hexColor,
+            metalness: 0.2,
+            roughness: 0.1,
+            transmission: 0.98,
+            ior: 1.2,
             transparent: true,
             opacity: 1,
             side: THREE.FrontSide
@@ -350,25 +353,26 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
         const shell = new THREE.Mesh(shellGeo, shellMat);
         group.add(shell);
 
-        // Dynamic Point Light
-        const light = new THREE.PointLight(hexColor, 1.5, 10);
+        // Dynamic Point Light (Stronger)
+        const light = new THREE.PointLight(hexColor, 2.5, 12);
         group.add(light);
 
-        // Subtle Glow Sprite
+        // Subtle Glow Sprite (High Res)
         const glowTex = makeGlowTexture(mem.color);
         const glowMat = new THREE.SpriteMaterial({
-            map: glowTex, color: hexColor,
-            transparent: true, opacity: 0.35,
+            map: glowTex, color: 0xffffff,
+            transparent: true, opacity: 0.6,
             blending: THREE.AdditiveBlending, depthWrite: false,
         });
         const glow = new THREE.Sprite(glowMat);
-        const gs = mem.size * 6;
+        const gs = mem.size * 10;
         glow.scale.set(gs, gs, 1);
         group.add(glow);
 
         group.userData = { 
             mem, core, shell, light, glow, 
             phase: Math.random() * Math.PI * 2,
+            twinkleSpeed: 0.5 + Math.random() * 1.5,
             baseScale: 1.0, targetScale: 1.0
         };
 
@@ -377,20 +381,23 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 
     /* Glow radial gradient texture */
     function makeGlowTexture(hexStr) {
-        const size = 128;
+        const size = 256;
         const c = document.createElement("canvas");
         c.width = c.height = size;
         const ctx = c.getContext("2d");
         const grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-        grad.addColorStop(0, hexStr);
-        grad.addColorStop(0.3, hexStr + "99");
-        grad.addColorStop(1, "transparent");
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.1, hexStr);
+        grad.addColorStop(0.4, hexStr + "66");
+        grad.addColorStop(1, "rgba(0,0,0,0)");
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, size, size);
         return new THREE.CanvasTexture(c);
     }
 
-    /* ==== CONSTELLATION LINES ==== */
+    /* ==== CONSTELLATION LINES (ENERGY FLOW) ==== */
+    // Keep reference to material for animation
+    let globalLineMat;
     function createConstellationLines() {
         const positions = [];
         const pairs = [[0, 1], [1, 4], [4, 3], [3, 2], [2, 5], [5, 6], [6, 0], [1, 3]];
@@ -401,10 +408,14 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
         });
         const geo = new THREE.BufferGeometry();
         geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(positions), 3));
-        const mat = new THREE.LineBasicMaterial({
-            color: 0x5533aa, transparent: true, opacity: 0.18,
+        
+        globalLineMat = new THREE.LineBasicMaterial({
+            color: 0x88ffcc, // Emerald tint to match Zubeneschamali
+            transparent: true, 
+            opacity: 0.3,
+            blending: THREE.AdditiveBlending
         });
-        return new THREE.LineSegments(geo, mat);
+        return new THREE.LineSegments(geo, globalLineMat);
     }
 
     /* ==== ANIMATION LOOP ==== */
@@ -432,7 +443,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
         const hovers = raycaster.intersectObjects(hitTargets, false);
         const hoveredShell = hovers.length > 0 ? hovers[0].object : null;
 
-        // Animate each memory star
+        // Animate each memory star with Twinkle
         starMeshes.forEach(s => {
             const d = s.userData;
             const isHovered = (hoveredShell === d.shell);
@@ -441,7 +452,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
             d.targetScale = isHovered ? 1.5 : 1.0;
             d.baseScale += (d.targetScale - d.baseScale) * 0.1;
             
-            const pulse = 0.85 + 0.15 * Math.sin(t * 1.5 + d.phase);
+            const pulse = 0.9 + 0.1 * Math.sin(t * d.twinkleSpeed + d.phase);
             const finalScale = pulse * d.baseScale;
             
             d.core.scale.setScalar(finalScale);
@@ -450,13 +461,16 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
             // Complex rotation
             d.shell.rotation.x = t * 0.2 + d.phase;
             d.shell.rotation.y = t * 0.3 + d.phase;
-            d.core.rotation.x = -t * 0.1;
-            d.core.rotation.y = -t * 0.15;
 
-            // Lights and glow react to hover
-            d.glow.material.opacity = 0.2 + 0.15 * Math.sin(t * 1.2 + d.phase) + (isHovered ? 0.4 : 0);
-            d.light.intensity = isHovered ? 3 : 1.5;
+            // Lights and glow react to hover strongly
+            d.glow.material.opacity = 0.4 + 0.2 * Math.sin(t * d.twinkleSpeed * 2 + d.phase) + (isHovered ? 0.4 : 0);
+            d.light.intensity = isHovered ? 4 : 2;
         });
+
+        // Pulsate energy lines
+        if (globalLineMat) {
+            globalLineMat.opacity = 0.2 + 0.3 * Math.sin(t * 2);
+        }
 
         // Slow nebula drift with Parallax Depth
         if (nebulaParts) {
