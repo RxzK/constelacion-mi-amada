@@ -138,7 +138,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 27.0.0 (Cinematic Soul)";
+        vTag.textContent = "VER: 28.0.0 (Sacred Milestone)";
 
         introActive = true;
 
@@ -382,17 +382,25 @@ function createCustomConstellation() {
     group.add(lines);
     group.scale.set(1.2, 1.2, 1.2); 
 
-    // Define Celestial Landmarks (3D Positions)
-    addCelestialLabelHTML("TU CORAZÓN (VIRGO)", "23 Ago - 22 Sep", new THREE.Vector3(-45, 15, -95));
-    addCelestialLabelHTML("SU ALMA (LIBRA)", "23 Sep - 22 Oct", new THREE.Vector3(35, 5, -100));
-    addCelestialLabelHTML("NUESTRA UNIÓN", "20 de Marzo 2026", new THREE.Vector3(-5, -65, -85), "union");
+    // --- CELESTIAL LANDMARKS (V28: FIXED VISIBILITY & POSITIONS) ---
+    // Virgo Label - Tuned for contrast pocket
+    addCelestialLabelHTML("TU CORAZÓN (VIRGO)", "23 Ago - 22 Sep", new THREE.Vector3(-40, 25, -95));
+    
+    // Libra Label - Tuned for contrast pocket
+    addCelestialLabelHTML("SU ALMA (LIBRA)", "23 Sep - 22 Oct", new THREE.Vector3(35, 20, -100));
+    
+    // THE SACRED UNION (March 20, 2026) - The Centerpiece
+    addCelestialLabelHTML("NUESTRA UNIÓN", "20 de Marzo 2026", new THREE.Vector3(0, -28, -90), "union");
+
+    // SECONDARY MILESTONE (Jan 20 - Talk Started)
+    addCelestialLabelHTML("INICIO DE TODO", "20 de Enero 2026", new THREE.Vector3(-60, -50, -110), "subtle");
 
     introScene.add(group);
 }
 
 function addCelestialLabelHTML(title, subtitle, pos, type = "normal") {
     const el = document.createElement("div");
-    el.className = `celestial-label ${type === 'union' ? 'celestial-union' : ''}`;
+    el.className = `celestial-label celestial-${type}`;
     el.innerHTML = `
         <div class="celestial-title">${title}</div>
         <div class="celestial-subtitle">${subtitle}</div>
@@ -401,8 +409,8 @@ function addCelestialLabelHTML(title, subtitle, pos, type = "normal") {
     
     celestialLabels.push({ element: el, pos: pos });
     
-    // Smooth fade in
-    setTimeout(() => el.classList.add('visible'), 3000);
+    // Controlled fade in
+    setTimeout(() => el.classList.add('visible'), type === 'union' ? 3500 : 4500);
 }
 
 function updateCelestialLabels() {
