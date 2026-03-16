@@ -138,9 +138,10 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 37.2.0 (True Frontal Close-Ups)";
+        vTag.textContent = "VER: 37.3.0 (Locked Cinematic Camera)";
 
         introActive = true;
+        let cinematicActive = false; // New flag to stop parallax during tour
 
         // 0. RELIABILITY: Inject CSS & Cleanup old labels
         injectCelestialStyles();
@@ -603,15 +604,17 @@ function introAnimate() {
     introAnimId = requestAnimationFrame(introAnimate);
     const t = (introClock.t += 0.01); 
     
-    // Pro Parallax Drift + Mouse Control
-    const driftX = Math.sin(t * 0.1) * 3;
-    const driftY = Math.cos(t * 0.1) * 3;
-    
-    // Smoothly interpolate towards mouse position
-    introCamera.position.x += (mouseX * 15 + driftX - introCamera.position.x) * 0.05;
-    introCamera.position.y += (-mouseY * 15 + driftY - introCamera.position.y) * 0.05;
-    
-    introCamera.lookAt(0, 0, -100);
+    // Pro Parallax Drift + Mouse Control - DISABLED DURING CINEMATIC
+    if (!cinematicActive) {
+        const driftX = Math.sin(t * 0.1) * 3;
+        const driftY = Math.cos(t * 0.1) * 3;
+        
+        // Smoothly interpolate towards mouse position
+        introCamera.position.x += (mouseX * 15 + driftX - introCamera.position.x) * 0.05;
+        introCamera.position.y += (-mouseY * 15 + driftY - introCamera.position.y) * 0.05;
+        
+        introCamera.lookAt(0, 0, -100);
+    }
 
     // Animate Aurora Shaders
     introScene.traverse(obj => {
@@ -683,8 +686,8 @@ function makeSoftStarTexture() {
 window.triggerIntroTransition = function (callback) {
     if (!introActive) return;
     
-    // Fade out main UI early
-    const overlay = document.getElementById('intro-overlay');
+    // LOCK CAMERA Control
+    cinematicActive = true;
     if(overlay) overlay.style.opacity = '0';
     
     // Cleanup labels
