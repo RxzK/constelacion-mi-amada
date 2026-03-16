@@ -138,10 +138,10 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 37.3.0 (Locked Cinematic Camera)";
+        vTag.textContent = "VER: 37.3.1 (Hotfix: Black Screen)";
 
         introActive = true;
-        let cinematicActive = false; // New flag to stop parallax during tour
+        window.cinematicActive = false; // Declared on window for global access
 
         // 0. RELIABILITY: Inject CSS & Cleanup old labels
         injectCelestialStyles();
@@ -605,7 +605,7 @@ function introAnimate() {
     const t = (introClock.t += 0.01); 
     
     // Pro Parallax Drift + Mouse Control - DISABLED DURING CINEMATIC
-    if (!cinematicActive) {
+    if (!window.cinematicActive) {
         const driftX = Math.sin(t * 0.1) * 3;
         const driftY = Math.cos(t * 0.1) * 3;
         
@@ -687,7 +687,9 @@ window.triggerIntroTransition = function (callback) {
     if (!introActive) return;
     
     // LOCK CAMERA Control
-    cinematicActive = true;
+    window.cinematicActive = true;
+    
+    const overlay = document.getElementById('intro-overlay');
     if(overlay) overlay.style.opacity = '0';
     
     // Cleanup labels
