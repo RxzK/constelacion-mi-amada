@@ -138,7 +138,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 28.0.0 (Sacred Milestone)";
+        vTag.textContent = "VER: 29.0.0 (Absolute Legend)";
 
         introActive = true;
 
@@ -330,10 +330,11 @@ function createCustomConstellation() {
     const lineMat = new THREE.LineBasicMaterial({ 
         color: 0xaaddff, 
         transparent: true, 
-        opacity: 0.4,
+        opacity: 0.5,
         blending: THREE.AdditiveBlending 
     });
-    // For dashed energy flow (optional, using opacity modulation for cleaner look)
+    // For Energy Flow animation (v29)
+    window.constellationLinesMat = lineMat;
 
     const allStars = [...virgoStars, ...libraStars];
     
@@ -503,10 +504,11 @@ function introAnimate() {
                 obj.scale.x = obj.scale.y = (obj.userData.baseScale || 5) * s;
             }
         });
-        // Energy Flow for Lines
-        const lines = window.starsGroup.children.find(c => c instanceof THREE.LineSegments);
-        if (lines) {
-            lines.material.opacity = 0.2 + Math.sin(t * 3) * 0.1;
+        // Energy Flow for Lines (v29: Pulsating Pulse)
+        if (window.constellationLinesMat) {
+            window.constellationLinesMat.opacity = 0.2 + Math.sin(t * 3) * 0.15;
+            // Additional magic: subtle color shifting
+            window.constellationLinesMat.color.setHSL(0.55 + Math.sin(t * 0.5) * 0.05, 0.7, 0.8);
         }
     }
 
