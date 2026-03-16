@@ -138,10 +138,11 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 37.4.0 (Unified Cinematic Flow)";
+        vTag.textContent = "VER: 37.5.0 (Cinematic Synchronization)";
 
         introActive = true;
-        window.cinematicActive = false; // Declared on window for global access
+        window.cinematicActive = false;
+        window.lookTarget = new THREE.Vector3(0, 0, -100);
 
         // 0. RELIABILITY: Inject CSS & Cleanup old labels
         injectCelestialStyles();
@@ -609,8 +610,11 @@ function introAnimate() {
         introCamera.position.x += (mouseX * 15 + driftX - introCamera.position.x) * 0.05;
         introCamera.position.y += (-mouseY * 15 + driftY - introCamera.position.y) * 0.05;
         
-        introCamera.lookAt(0, 0, -100);
+        window.lookTarget.set(0, 0, -100);
     }
+    
+    // Alway stay oriented based on the current target
+    introCamera.lookAt(window.lookTarget);
 
     // Animate Aurora Shaders
     introScene.traverse(obj => {
@@ -690,7 +694,7 @@ window.triggerIntroTransition = function (callback) {
     
     // Cleanup labels
     celestialLabels.forEach(label => {
-        label.element.style.opacity = '0';
+        label.element.style.display = 'none'; // Force hide
     });
 
     const cinematicLayer = document.getElementById('cinematic-layer');
@@ -729,33 +733,31 @@ window.triggerIntroTransition = function (callback) {
     // SPICA local = (-30, -15, -100) -> Global = (-54, -27, -180). 
     // We position the camera exactly in front (X, Y match exactly). Distance Z = 90.
     
-    // WAYPOINT 1: SPICA (Virgo - Karla)
-    tl.to(introCamera.position, { x: -54, y: -27, z: -90, duration: 4, ease: "power2.inOut" }, 0)
-      .to(lookTarget, { x: -54, y: -27, z: -180, duration: 4, ease: "power2.inOut", onUpdate: () => introCamera.lookAt(lookTarget) }, 0)
+    // SPICA (Virgo - Karla)
+    tl.to(introCamera.position, { x: -54, y: -27, z: -100, duration: 3, ease: "power2.inOut" }, 0.5)
+      .to(window.lookTarget, { x: -54, y: -27, z: -180, duration: 3, ease: "power2.inOut" }, 0.5)
       .call(() => showText("SPICA (El corazón de Virgo)", "Eres mi luz dorada. La chispa brillante que nutre mi vida y hace florecer todo mi mundo."))
-      .to(introBloom, { strength: 1.3, duration: 2, yoyo: true, repeat: 1 }, "+=0") // Soft pulse
-      .call(hideText, null, "+=4.5"); // Give time to read
+      .to(introBloom, { strength: 1.3, duration: 1.5, yoyo: true, repeat: 1 })
+      .call(hideText, null, "+=1.5"); // Total 3s wait
 
-    // ZUBENESCHAMALI local = (17, 8, -110) -> Global = (30.6, 14.4, -198)
-    // WAYPOINT 2: ZUBENESCHAMALI (Libra - Tú)
-    tl.to(introCamera.position, { x: 30.6, y: 14.4, z: -108, duration: 5, ease: "power2.inOut" }, "+=0.5")
-      .to(lookTarget, { x: 30.6, y: 14.4, z: -198, duration: 5, ease: "power2.inOut", onUpdate: () => introCamera.lookAt(lookTarget) }, "-=5")
+    // ZUBENESCHAMALI (Libra - Tú)
+    tl.to(introCamera.position, { x: 30.6, y: 14.4, z: -120, duration: 3, ease: "power2.inOut" }, "+=0.2")
+      .to(window.lookTarget, { x: 30.6, y: 14.4, z: -198, duration: 3, ease: "power2.inOut" }, "-=3")
       .call(() => showText("ZUBENESCHAMALI (El alma de Libra)", "Y yo prometo ser siempre tu equilibrio. Tu pilar de paz, tu balanza y tu refugio infinito."))
-      .to(introBloom, { strength: 1.3, duration: 2, yoyo: true, repeat: 1 }, "+=0") 
-      .call(hideText, null, "+=5");
+      .to(introBloom, { strength: 1.3, duration: 1.5, yoyo: true, repeat: 1 }) 
+      .call(hideText, null, "+=1.5");
 
-    // UNION STAR local = (0, 10, -90) -> Global = (0, 18, -162)
-    // WAYPOINT 3: THE HEART OF THE UNION
-    tl.to(introCamera.position, { x: 0, y: 18, z: -72, duration: 5, ease: "power3.inOut" }, "+=0.5")
-      .to(lookTarget, { x: 0, y: 18, z: -162, duration: 5, ease: "power3.inOut", onUpdate: () => introCamera.lookAt(lookTarget) }, "-=5")
+    // UNION STAR
+    tl.to(introCamera.position, { x: 0, y: 18, z: -80, duration: 3, ease: "power3.inOut" }, "+=0.2")
+      .to(window.lookTarget, { x: 0, y: 18, z: -162, duration: 3, ease: "power3.inOut" }, "-=3")
       .call(() => showText("NUESTRA UNIÓN (20 de Marzo)", "Dos destinos, dos estrellas, fundiéndose para crear el universo más hermoso de todos."));
       
-    // FINAL WARP: Hyperspace Travel Effect!
-    tl.to(introCamera, { fov: 140, duration: 3.5, ease: "power3.in", onUpdate: () => introCamera.updateProjectionMatrix() }, "+=4.5")
-      .to(introCamera.position, { z: -1400, duration: 3.5, ease: "power3.in" }, "-=3.5")
-      .to(introBloom, { strength: 5, radius: 2.0, duration: 3, ease: "power2.in" }, "-=3.5")
-      .call(hideText, null, "-=2.5")
-      .to("#intro-whiteout", { opacity: 1, duration: 1.5 }, "-=1.5");
+    // FINAL WARP
+    tl.to(introCamera, { fov: 140, duration: 2.5, ease: "power3.in", onUpdate: () => introCamera.updateProjectionMatrix() }, "+=2")
+      .to(introCamera.position, { z: -1600, duration: 2.5, ease: "power3.in" }, "-=2.5")
+      .to(introBloom, { strength: 4, radius: 1.5, duration: 2, ease: "power2.in" }, "-=2.5")
+      .call(hideText, null, "-=1.5")
+      .to("#intro-whiteout", { opacity: 1, duration: 1 }, "-=1");
 };
 
 function createPremiumSnow() {
