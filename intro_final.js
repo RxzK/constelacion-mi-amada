@@ -113,7 +113,16 @@ const fbm = (x, y, oct = 6) => {
 // --- SCENE GLOBALS ---
 let introRenderer, introScene, introCamera, introComposer, introBloom;
 let iglooGroup, snowParticles, cosmicDust, shootingStars = [], introActive = true, introAnimId;
-let celestialLabels = []; // Tracker for HTML labels
+let celestialLabels = []; 
+let mouseX = 0, mouseY = 0;
+let targetCameraPos = new THREE.Vector3(0, 0, 50);
+
+function initMouseParallax() {
+    window.addEventListener('mousemove', (e) => {
+        mouseX = (e.clientX / window.innerWidth) - 0.5;
+        mouseY = (e.clientY / window.innerHeight) - 0.5;
+    });
+}
 const introClock = { t: 0 };
 
 window.initIntroScene = function () {
@@ -129,7 +138,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 26.0.0 (Universal Clarity)";
+        vTag.textContent = "VER: 27.0.0 (Cinematic Soul)";
 
         introActive = true;
 
@@ -145,8 +154,11 @@ window.initIntroScene = function () {
         introScene = new THREE.Scene();
         introScene.background = new THREE.Color(0x020815);
         introCamera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
-        introCamera.position.set(0, 0, 50);
+        introCamera.position.set(0, 0, 150); // Start further back for pan-in
         introCamera.lookAt(0, 0, -100);
+
+        // CINEMATIC PAN-IN
+        gsap.to(introCamera.position, { z: 50, duration: 6, ease: "slow(0.7, 0.7, false)" });
 
         // 3. LIGHTS
         const moon = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -164,6 +176,7 @@ window.initIntroScene = function () {
         createSpectacularAurora();
         createCustomConstellation();
         initIglooInteraction();
+        initMouseParallax();
 
         // 5. POST-PROCESSING (Balanced Bloom)
         const renderPass = new RenderPass(introScene, introCamera);
@@ -320,6 +333,7 @@ function createCustomConstellation() {
         opacity: 0.4,
         blending: THREE.AdditiveBlending 
     });
+    // For dashed energy flow (optional, using opacity modulation for cleaner look)
 
     const allStars = [...virgoStars, ...libraStars];
     
@@ -452,9 +466,14 @@ function introAnimate() {
     introAnimId = requestAnimationFrame(introAnimate);
     const t = (introClock.t += 0.01); 
     
-    // Slow cinematic drift looking into the void
-    introCamera.position.x = Math.sin(t * 0.1) * 5;
-    introCamera.position.y = Math.cos(t * 0.1) * 5;
+    // Pro Parallax Drift + Mouse Control
+    const driftX = Math.sin(t * 0.1) * 3;
+    const driftY = Math.cos(t * 0.1) * 3;
+    
+    // Smoothly interpolate towards mouse position
+    introCamera.position.x += (mouseX * 15 + driftX - introCamera.position.x) * 0.05;
+    introCamera.position.y += (-mouseY * 15 + driftY - introCamera.position.y) * 0.05;
+    
     introCamera.lookAt(0, 0, -100);
 
     // Animate Aurora Shaders
