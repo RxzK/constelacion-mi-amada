@@ -138,7 +138,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 37.1.0 (Perfect Close-Ups)";
+        vTag.textContent = "VER: 37.2.0 (True Frontal Close-Ups)";
 
         introActive = true;
 
@@ -723,28 +723,27 @@ window.triggerIntroTransition = function (callback) {
 
     // Note: The stars are within a group scaled by 1.8. 
     // SPICA local = (-30, -15, -100) -> Global = (-54, -27, -180). 
-    // Distance Z = 90. Offsetting lookTarget X by +34 to place star on left.
-    // WAYPOINT 1: SPICA (Virgo - Karla) -> Target: (-20, -27, -180), Camera: (-44, -27, -90)
-    tl.to(introCamera.position, { x: -44, y: -27, z: -90, duration: 4, ease: "power2.inOut" }, 0)
-      .to(lookTarget, { x: -20, y: -27, z: -180, duration: 4, ease: "power2.inOut", onUpdate: () => introCamera.lookAt(lookTarget) }, 0)
+    // We position the camera exactly in front (X, Y match exactly). Distance Z = 90.
+    
+    // WAYPOINT 1: SPICA (Virgo - Karla)
+    tl.to(introCamera.position, { x: -54, y: -27, z: -90, duration: 4, ease: "power2.inOut" }, 0)
+      .to(lookTarget, { x: -54, y: -27, z: -180, duration: 4, ease: "power2.inOut", onUpdate: () => introCamera.lookAt(lookTarget) }, 0)
       .call(() => showText("SPICA (El corazón de Virgo)", "Eres mi luz dorada. La chispa brillante que nutre mi vida y hace florecer todo mi mundo."))
       .to(introBloom, { strength: 1.3, duration: 2, yoyo: true, repeat: 1 }, "+=0") // Soft pulse
       .call(hideText, null, "+=4.5"); // Give time to read
 
     // ZUBENESCHAMALI local = (17, 8, -110) -> Global = (30.6, 14.4, -198)
-    // Distance Z = 90. Offset Target X by +30
-    // WAYPOINT 2: ZUBENESCHAMALI (Libra - Tú) -> Target: (60.6, 14.4, -198), Camera: (40.6, 14.4, -108)
-    tl.to(introCamera.position, { x: 40.6, y: 14.4, z: -108, duration: 5, ease: "power2.inOut" }, "+=0.5")
-      .to(lookTarget, { x: 60.6, y: 14.4, z: -198, duration: 5, ease: "power2.inOut", onUpdate: () => introCamera.lookAt(lookTarget) }, "-=5")
+    // WAYPOINT 2: ZUBENESCHAMALI (Libra - Tú)
+    tl.to(introCamera.position, { x: 30.6, y: 14.4, z: -108, duration: 5, ease: "power2.inOut" }, "+=0.5")
+      .to(lookTarget, { x: 30.6, y: 14.4, z: -198, duration: 5, ease: "power2.inOut", onUpdate: () => introCamera.lookAt(lookTarget) }, "-=5")
       .call(() => showText("ZUBENESCHAMALI (El alma de Libra)", "Y yo prometo ser siempre tu equilibrio. Tu pilar de paz, tu balanza y tu refugio infinito."))
       .to(introBloom, { strength: 1.3, duration: 2, yoyo: true, repeat: 1 }, "+=0") 
       .call(hideText, null, "+=5");
 
     // UNION STAR local = (0, 10, -90) -> Global = (0, 18, -162)
-    // Distance Z = 90. Offset Target X by +30
-    // WAYPOINT 3: THE HEART OF THE UNION -> Target: (30, 18, -162), Camera: (10, 18, -72)
-    tl.to(introCamera.position, { x: 10, y: 18, z: -72, duration: 5, ease: "power3.inOut" }, "+=0.5")
-      .to(lookTarget, { x: 30, y: 18, z: -162, duration: 5, ease: "power3.inOut", onUpdate: () => introCamera.lookAt(lookTarget) }, "-=5")
+    // WAYPOINT 3: THE HEART OF THE UNION
+    tl.to(introCamera.position, { x: 0, y: 18, z: -72, duration: 5, ease: "power3.inOut" }, "+=0.5")
+      .to(lookTarget, { x: 0, y: 18, z: -162, duration: 5, ease: "power3.inOut", onUpdate: () => introCamera.lookAt(lookTarget) }, "-=5")
       .call(() => showText("NUESTRA UNIÓN (20 de Marzo)", "Dos destinos, dos estrellas, fundiéndose para crear el universo más hermoso de todos."));
       
     // FINAL WARP: Hyperspace Travel Effect!
