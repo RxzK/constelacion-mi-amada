@@ -138,7 +138,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 31.0.0 (Personalized Stars)";
+        vTag.textContent = "VER: 32.0.0 (The Sacred Bridge)";
 
         introActive = true;
 
@@ -388,18 +388,46 @@ function createCustomConstellation() {
     group.add(lines);
     group.scale.set(1.2, 1.2, 1.2); 
 
-    // --- CELESTIAL LANDMARKS (V31: REAL BIRTHDAYS) ---
-    // Virgo Label - User Birthday
-    addCelestialLabelHTML("VIRGO", "6 de Septiembre", new THREE.Vector3(-40, 25, -95));
+    // --- CELESTIAL LANDMARKS (V32: REFINED IDENTITY & UNION BRIDGE) ---
+    // Virgo Label (Tú)
+    addCelestialLabelHTML("6 de Septiembre", "VIRGO · EL LATIDO DE TU CORAZÓN", new THREE.Vector3(-40, 25, -95));
     
-    // Libra Label - Partner Birthday
-    addCelestialLabelHTML("LIBRA", "11 de Octubre", new THREE.Vector3(35, 20, -100));
+    // Libra Label (Ella)
+    addCelestialLabelHTML("11 de Octubre", "LIBRA · LA ESENCIA DE SU ALMA", new THREE.Vector3(35, 20, -100));
     
-    // THE SACRED UNION (March 20, 2026) - The Centerpiece
+    // THE SACRED UNION (March 20) - The Centerpiece
     addCelestialLabelHTML("NUESTRA UNIÓN", "20 de Marzo", new THREE.Vector3(0, -28, -90), "union");
 
-    // SECONDARY MILESTONE (Jan 20 - Talk Started)
-    addCelestialLabelHTML("INICIO DE TODO", "20 de Enero", new THREE.Vector3(-60, -50, -110), "subtle");
+    // --- THE UNION BRIDGE (V32) ---
+    const bridgeGeom = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-25, 10, -95), // Part from Virgo
+        new THREE.Vector3(0, -5, -92.5), // Mid point (The Heart)
+        new THREE.Vector3(25, 5, -100)   // To Libra
+    ]);
+    const bridgeMat = new THREE.LineBasicMaterial({ 
+        color: 0xffd700, 
+        transparent: true, 
+        opacity: 0.3, 
+        blending: THREE.AdditiveBlending 
+    });
+    const bridgeLine = new THREE.Line(bridgeGeom, bridgeMat);
+    group.add(bridgeLine);
+
+    // THE HEART OF THE UNION STAR
+    const unionHeart = new THREE.Mesh(
+        new THREE.SphereGeometry(0.8, 16, 16),
+        new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 })
+    );
+    unionHeart.position.set(0, -5, -92.5);
+    const heartGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: makeGlowTexture('#ffd700'),
+        transparent: true,
+        opacity: 0.6,
+        blending: THREE.AdditiveBlending
+    }));
+    heartGlow.scale.set(8, 8, 1);
+    unionHeart.add(heartGlow);
+    group.add(unionHeart);
 
     introScene.add(group);
 }
