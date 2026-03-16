@@ -138,9 +138,14 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 29.0.0 (Absolute Legend)";
+        vTag.textContent = "VER: 30.0.0 (Absolute Reliability)";
 
         introActive = true;
+
+        // 0. RELIABILITY: Inject CSS & Cleanup old labels
+        injectCelestialStyles();
+        celestialLabels.forEach(l => { if(l.element.parentNode) l.element.parentNode.removeChild(l.element); });
+        celestialLabels = [];
 
         // 1. RENDERER
         introRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
@@ -421,18 +426,70 @@ function updateCelestialLabels() {
         const vector = label.pos.clone();
         vector.project(introCamera);
 
+        // Map to 2D screen coordinates
         const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
         const y = -(vector.y * 0.5 - 0.5) * window.innerHeight;
 
-        // Hide if behind camera or out of bounds
-        if (vector.z > 1 || x < 0 || x > window.innerWidth || y < 0 || y > window.innerHeight) {
-            label.element.style.display = 'none';
+        // Hide if behind camera or out of bounds (with a safety margin)
+        if (vector.z > 1 || x < -200 || x > window.innerWidth + 200 || y < -200 || y > window.innerHeight + 200) {
+            label.element.style.opacity = '0';
+            label.element.style.pointerEvents = 'none';
         } else {
-            label.element.style.display = 'block';
             label.element.style.left = `${x}px`;
             label.element.style.top = `${y}px`;
+            // The 'visible' class handles the fade in once
         }
     });
+}
+
+function injectCelestialStyles() {
+    if (document.getElementById('celestial-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'celestial-styles';
+    style.textContent = `
+        .celestial-label {
+            position: absolute;
+            top: 0; left: 0;
+            pointer-events: none;
+            transform: translate(-50%, -120%); /* Position above the star */
+            z-index: 99999;
+            font-family: 'Outfit', sans-serif;
+            color: white;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 2s ease-out;
+            filter: drop-shadow(0 0 10px rgba(0,0,0,0.9));
+            width: 300px;
+        }
+        .celestial-label.visible { opacity: 1; }
+        .celestial-title {
+            font-weight: 700; font-size: 1.2rem;
+            letter-spacing: 2px; text-transform: uppercase;
+            text-shadow: 0 0 10px currentColor; margin-bottom: 2px;
+        }
+        .celestial-subtitle {
+            font-weight: 300; font-size: 0.85rem;
+            opacity: 0.8; color: #aaddff;
+        }
+        .celestial-union {
+            border: 2px solid rgba(255, 215, 0, 0.6);
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px 30px;
+            border-radius: 50px;
+            backdrop-filter: blur(15px);
+            color: #ffd700;
+            width: 320px;
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.2);
+            animation: celestialPulse 2.5s infinite ease-in-out;
+            transform: translate(-50%, 50%); /* Position below the bridge */
+        }
+        .celestial-subtle { opacity: 0.5; font-size: 0.7rem; }
+        @keyframes celestialPulse {
+            0%, 100% { transform: translate(-50%, 50%) scale(1); box-shadow: 0 0 20px rgba(255, 215, 0, 0.2); }
+            50% { transform: translate(-50%, 50%) scale(1.05); box-shadow: 0 0 50px rgba(255, 215, 0, 0.5); }
+        }
+    `;
+    document.head.appendChild(style);
 }
 
 function makeGlowTexture(color) {
