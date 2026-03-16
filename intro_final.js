@@ -138,7 +138,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 33.0.0 (Majestic Union)";
+        vTag.textContent = "VER: 34.0.0 (Grand Restoration)";
 
         introActive = true;
 
@@ -472,16 +472,34 @@ function updateCelestialLabels() {
         const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
         const y = -(vector.y * 0.5 - 0.5) * window.innerHeight;
 
-        // Hide if behind camera or out of bounds (with a safety margin)
-        if (vector.z > 1 || x < -200 || x > window.innerWidth + 200 || y < -200 || y > window.innerHeight + 200) {
+        // Ensure visibility and correct positioning
+        label.element.style.transform = `translate(-50%, -50%)`;
+        label.element.classList.add('visible');
+
+        // Hide if behind camera
+        if (vector.z > 1) {
             label.element.style.opacity = '0';
-            label.element.style.pointerEvents = 'none';
         } else {
             label.element.style.left = `${x}px`;
             label.element.style.top = `${y}px`;
-            // The 'visible' class handles the fade in once
+            label.element.style.opacity = '1';
         }
     });
+}
+
+function makeBetterGlowTexture(color) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+    grad.addColorStop(0, color);
+    grad.addColorStop(0.2, color);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 128, 128);
+    const tex = new THREE.CanvasTexture(canvas);
+    return tex;
 }
 
 function injectCelestialStyles() {
