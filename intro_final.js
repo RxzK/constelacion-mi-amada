@@ -138,7 +138,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 30.0.0 (Absolute Reliability)";
+        vTag.textContent = "VER: 31.0.0 (Personalized Stars)";
 
         introActive = true;
 
@@ -388,18 +388,18 @@ function createCustomConstellation() {
     group.add(lines);
     group.scale.set(1.2, 1.2, 1.2); 
 
-    // --- CELESTIAL LANDMARKS (V28: FIXED VISIBILITY & POSITIONS) ---
-    // Virgo Label - Tuned for contrast pocket
-    addCelestialLabelHTML("TU CORAZÓN (VIRGO)", "23 Ago - 22 Sep", new THREE.Vector3(-40, 25, -95));
+    // --- CELESTIAL LANDMARKS (V31: REAL BIRTHDAYS) ---
+    // Virgo Label - User Birthday
+    addCelestialLabelHTML("VIRGO", "6 de Septiembre", new THREE.Vector3(-40, 25, -95));
     
-    // Libra Label - Tuned for contrast pocket
-    addCelestialLabelHTML("SU ALMA (LIBRA)", "23 Sep - 22 Oct", new THREE.Vector3(35, 20, -100));
+    // Libra Label - Partner Birthday
+    addCelestialLabelHTML("LIBRA", "11 de Octubre", new THREE.Vector3(35, 20, -100));
     
     // THE SACRED UNION (March 20, 2026) - The Centerpiece
-    addCelestialLabelHTML("NUESTRA UNIÓN", "20 de Marzo 2026", new THREE.Vector3(0, -28, -90), "union");
+    addCelestialLabelHTML("NUESTRA UNIÓN", "20 de Marzo", new THREE.Vector3(0, -28, -90), "union");
 
     // SECONDARY MILESTONE (Jan 20 - Talk Started)
-    addCelestialLabelHTML("INICIO DE TODO", "20 de Enero 2026", new THREE.Vector3(-60, -50, -110), "subtle");
+    addCelestialLabelHTML("INICIO DE TODO", "20 de Enero", new THREE.Vector3(-60, -50, -110), "subtle");
 
     introScene.add(group);
 }
