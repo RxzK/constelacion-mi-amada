@@ -111,7 +111,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
     let renderer, scene, camera, animFrameId;
     let composer, bloomPass;
     let starMeshes = [];
-    let nebulaParts, bgStarfield, stardust;
+    let nebulaParts, bgStarfield; // Stardust removed for perf
     let mouseTrail = [];
     let particleTexture;
 
@@ -205,10 +205,6 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
         composer.addPass(renderScene);
         composer.addPass(bloomPass);
 
-        /* ---- DYNAMIC STARDUST ---- */
-        stardust = createStardust(1200);
-        scene.add(stardust);
-
         /* ---- EVENTS ---- */
         setupEvents(canvas);
 
@@ -274,19 +270,19 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
         return new THREE.CanvasTexture(canvas);
     }
 
-    /* ==== VOLUMETRIC NEBULA (PREMIUM) ==== */
+    /* ==== VOLUMETRIC NEBULA (PERF OPTIMIZED) ==== */
     function createNebula() {
         const group = new THREE.Group();
-        const count = 75; // Increased density
+        const count = 30; // REDUCED density for performance
         
-        // Create a softer, wider cloud-like radial gradient
-        const size = 512;
+        // Create 128px texture instead of 512px
+        const size = 128;
         const c = document.createElement("canvas");
         c.width = c.height = size;
         const ctx = c.getContext("2d");
         const grad = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
-        grad.addColorStop(0, "rgba(255, 255, 255, 0.8)");
-        grad.addColorStop(0.3, "rgba(255, 255, 255, 0.3)");
+        grad.addColorStop(0, "rgba(255, 255, 255, 0.6)");
+        grad.addColorStop(0.3, "rgba(255, 255, 255, 0.2)");
         grad.addColorStop(1, "rgba(255, 255, 255, 0)");
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, size, size);
@@ -325,52 +321,49 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
         return group;
     }
 
-    /* ==== MEMORY STAR (PREMIUM CRYSTALLINE) ==== */
+    /* ==== MEMORY STAR (PERF OPTIMIZED) ==== */
     function createMemoryStar(mem) {
         const group = new THREE.Group();
         group.position.set(mem.position.x, mem.position.y, mem.position.z);
 
         const hexColor = new THREE.Color(mem.color);
 
-        // Core Glowing Crystal (Sharper)
+        // Core Glowing Crystal 
         const coreGeo = new THREE.IcosahedronGeometry(mem.size * 0.5, 0);
         const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
         const core = new THREE.Mesh(coreGeo, coreMat);
         group.add(core);
 
-        // Outer Glass Shell (More ethereal)
+        // Outer Glass Shell (Material simplified)
         const shellGeo = new THREE.IcosahedronGeometry(mem.size * 1.2, 1);
         const shellMat = new THREE.MeshPhysicalMaterial({
             color: hexColor,
-            metalness: 0.2,
-            roughness: 0.1,
-            transmission: 0.98,
-            ior: 1.2,
+            metalness: 0.1,
+            roughness: 0.3,
+            transmission: 0.9,
             transparent: true,
-            opacity: 1,
+            opacity: 0.9,
             side: THREE.FrontSide
         });
         const shell = new THREE.Mesh(shellGeo, shellMat);
         group.add(shell);
 
-        // Dynamic Point Light (Stronger)
-        const light = new THREE.PointLight(hexColor, 2.5, 12);
-        group.add(light);
+        // REMOVED PointLight FOR PERFORMANCE (V39)
 
-        // Subtle Glow Sprite (High Res)
+        // FAKE GLARE (2D Sprite as lighting)
         const glowTex = makeGlowTexture(mem.color);
         const glowMat = new THREE.SpriteMaterial({
-            map: glowTex, color: 0xffffff,
-            transparent: true, opacity: 0.6,
+            map: glowTex, color: 0xffffff, // Use white tint, texture brings color
+            transparent: true, opacity: 0.7, // Base opacity
             blending: THREE.AdditiveBlending, depthWrite: false,
         });
         const glow = new THREE.Sprite(glowMat);
-        const gs = mem.size * 10;
+        const gs = mem.size * 12; // Larger sprite to simulate light throw
         glow.scale.set(gs, gs, 1);
         group.add(glow);
 
         group.userData = { 
-            mem, core, shell, light, glow, 
+            mem, core, shell, glow, 
             phase: Math.random() * Math.PI * 2,
             twinkleSpeed: 0.5 + Math.random() * 1.5,
             baseScale: 1.0, targetScale: 1.0
@@ -379,9 +372,9 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
         return group;
     }
 
-    /* Glow radial gradient texture */
+    /* Glow radial gradient texture (Optimized Size) */
     function makeGlowTexture(hexStr) {
-        const size = 256;
+        const size = 128; // Reduced from 256 for memory
         const c = document.createElement("canvas");
         c.width = c.height = size;
         const ctx = c.getContext("2d");
@@ -462,12 +455,13 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
             d.shell.rotation.x = t * 0.2 + d.phase;
             d.shell.rotation.y = t * 0.3 + d.phase;
 
-            // Lights and glow react to hover strongly
-            d.glow.material.opacity = 0.4 + 0.2 * Math.sin(t * d.twinkleSpeed * 2 + d.phase) + (isHovered ? 0.4 : 0);
-            d.light.intensity = isHovered ? 4 : 2;
+            // Fake localized light using purely opacity on the sprite
+            // Base opacity + twinkle + massive hover glow
+            const hoverGlow = isHovered ? 0.6 : 0;
+            d.glow.material.opacity = 0.4 + 0.2 * Math.sin(t * d.twinkleSpeed * 2 + d.phase) + hoverGlow;
         });
 
-        // Pulsate energy lines
+        // Pulsate energy lines safely
         if (globalLineMat) {
             globalLineMat.opacity = 0.2 + 0.3 * Math.sin(t * 2);
         }
@@ -480,12 +474,6 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
         if (bgStarfield) {
             bgStarfield.rotation.y = t * 0.002 + mouse3D.x * 0.04;
             bgStarfield.rotation.x = mouse3D.y * 0.04;
-        }
-
-        // Animate stardust
-        if (stardust) {
-            stardust.rotation.y += 0.0005;
-            stardust.position.y = Math.sin(t * 0.5) * 0.2;
         }
 
         // Mouse trail animation
