@@ -138,7 +138,7 @@ window.initIntroScene = function () {
             vTag.style.cssText = "position:fixed;top:10px;left:10px;color:#aaddff;z-index:10000;font-family:monospace;background:rgba(0,0,0,0.3);padding:4px;border-radius:4px;opacity:0.5;";
             document.body.appendChild(vTag);
         }
-        vTag.textContent = "VER: 36.0.0 (The Cinematic Star Journey)";
+        vTag.textContent = "VER: 37.0.0 (Cinematic Polish & Warp Warp)";
 
         introActive = true;
 
@@ -314,24 +314,23 @@ function createCustomConstellation() {
     
     // ASTRONOMICALLY ACCURATE VIRGO (Shifted Down for Contrast)
     const virgoStars = [
-        { x: -30, y: -15, z: -100, size: 2.2, name: "Spica" },
-        { x: -23, y: -8, z: -105, size: 1.2, name: "Porrima" },
-        { x: -17, y: 2, z: -110, size: 1.0, name: "Vindemiatrix" },
-        { x: -27, y: 5, z: -115, size: 0.8, name: "Auva" },
-        { x: -35, y: 0, z: -112, size: 0.9, name: "Zavijava" },
-        { x: -40, y: -8, z: -108, size: 1.0, name: "Zaniah" },
-        { x: -30, y: 15, z: -120, size: 0.7, name: "Heze" }
+        { x: -30, y: -15, z: -100, size: 2.2, name: "Spica", color: "#ffdf80" }, // Bright warm gold
+        { x: -23, y: -8, z: -105, size: 1.2, name: "Porrima", color: "#eef4ff" }, // Soft blue-white
+        { x: -17, y: 2, z: -110, size: 1.0, name: "Vindemiatrix", color: "#d0e5ff" },
+        { x: -27, y: 5, z: -115, size: 0.8, name: "Auva", color: "#eef4ff" },
+        { x: -35, y: 0, z: -112, size: 0.9, name: "Zavijava", color: "#f0f8ff" },
+        { x: -40, y: -8, z: -108, size: 1.0, name: "Zaniah", color: "#d0e5ff" },
+        { x: -30, y: 15, z: -120, size: 0.7, name: "Heze", color: "#eef4ff" }
     ];
 
     // ASTRONOMICALLY ACCURATE LIBRA (Shifted Down for Contrast)
     const libraStars = [
-        { x: 10, y: -5, z: -105, size: 1.8, name: "Zubenelgenubi" },
-        { x: 17, y: 8, z: -110, size: 1.6, name: "Zubeneschamali" },
-        { x: 27, y: 0, z: -115, size: 1.2, name: "Zubenelhakrabi" },
-        { x: 20, y: -12, z: -108, size: 1.1, name: "Brachium" }
+        { x: 10, y: -5, z: -105, size: 1.8, name: "Zubenelgenubi", color: "#eef4ff" },
+        { x: 17, y: 8, z: -110, size: 1.6, name: "Zubeneschamali", color: "#88ffcc" }, // Unique Emerald / Cyan
+        { x: 27, y: 0, z: -115, size: 1.2, name: "Zubenelhakrabi", color: "#d0e5ff" },
+        { x: 20, y: -12, z: -108, size: 1.1, name: "Brachium", color: "#f0f8ff" }
     ];
 
-    const starTex = makeGlowTexture("#ffffff"); // High quality halo texture
     const lineMat = new THREE.LineBasicMaterial({ 
         color: 0xaaddff, 
         transparent: true, 
@@ -355,10 +354,12 @@ function createCustomConstellation() {
     ];
 
     allStars.forEach(s => {
+        const starColor = s.color || "#ffffff";
+        const starTex = makeGlowTexture(starColor);
         const mat = new THREE.SpriteMaterial({ 
             map: starTex, 
             transparent: true, 
-            opacity: 0.8, 
+            opacity: 0.9, 
             blending: THREE.AdditiveBlending,
             depthWrite: false
         });
@@ -371,7 +372,7 @@ function createCustomConstellation() {
         // Core point (Internal bright dot)
         const coreGeo = new THREE.BufferGeometry();
         coreGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0,0,0]), 3));
-        const coreMat = new THREE.PointsMaterial({ size: s.size * 0.8, color: 0xffffff, transparent: true, opacity: 0.9 });
+        const coreMat = new THREE.PointsMaterial({ size: s.size * 1.5, color: '#ffffff', transparent: true, opacity: 1.0 });
         const core = new THREE.Points(coreGeo, coreMat);
         sprite.add(core);
     });
@@ -698,12 +699,11 @@ window.triggerIntroTransition = function (callback) {
         onComplete: () => {
             introActive = false; 
             cancelAnimationFrame(introAnimId);
-            gsap.to("#intro-whiteout", { opacity: 1, duration: 2.5, onComplete: callback });
+            callback(); // The transition whiteout overlaps this perfectly
         }
     });
 
     // We will fly the camera and the lookAt target.
-    // Create a dummy object to animate the lookAt target
     const lookTarget = new THREE.Vector3(0, 0, -100);
 
     // Stop manual parallax tracking
@@ -719,29 +719,37 @@ window.triggerIntroTransition = function (callback) {
         cinematicLayer.style.opacity = '0';
     };
 
-    // WAYPOINT 1: SPICA (Virgo - Karla)
-    tl.to(introCamera.position, { x: -60, y: 35, z: -70, duration: 4, ease: "power2.inOut" }, 0)
-      .to(lookTarget, { x: -60, y: 45, z: -95, duration: 4, ease: "power2.inOut", onUpdate: () => introCamera.lookAt(lookTarget) }, 0)
+    // Note: The stars are within a group scaled by 1.8. 
+    // SPICA local = (-30, -15, -100) -> Global = (-54, -27, -180). 
+    // We position the camera 30 units in front of it.
+    
+    // WAYPOINT 1: SPICA (Virgo - Karla) -> Target: (-54, -27, -180), Camera: (-54, -27, -150)
+    tl.to(introCamera.position, { x: -54, y: -27, z: -150, duration: 4, ease: "power2.inOut" }, 0)
+      .to(lookTarget, { x: -54, y: -27, z: -180, duration: 4, ease: "power2.inOut", onUpdate: () => introCamera.lookAt(lookTarget) }, 0)
       .call(() => showText("SPICA (El corazón de Virgo)", "Eres mi luz dorada. La chispa brillante que nutre mi vida y hace florecer todo mi mundo."))
-      .to(introBloom, { strength: 1.8, duration: 2, yoyo: true, repeat: 1 }, "+=0") // Pulse star
-      .call(hideText, null, "+=4"); // Wait 4s to read
+      .to(introBloom, { strength: 1.5, duration: 2, yoyo: true, repeat: 1 }, "+=0") // Pulse star
+      .call(hideText, null, "+=4.5"); // Give time to read
 
-    // WAYPOINT 2: ZUBENESCHAMALI (Libra - Tú)
-    tl.to(introCamera.position, { x: 55, y: 25, z: -75, duration: 4, ease: "power2.inOut" }, "+=1")
-      .to(lookTarget, { x: 55, y: 35, z: -100, duration: 4, ease: "power2.inOut", onUpdate: () => introCamera.lookAt(lookTarget) }, "-=4")
+    // ZUBENESCHAMALI local = (17, 8, -110) -> Global = (30.6, 14.4, -198)
+    // WAYPOINT 2: ZUBENESCHAMALI (Libra - Tú) -> Target: (30.6, 14.4, -198), Camera: (30.6, 14.4, -168)
+    tl.to(introCamera.position, { x: 30.6, y: 14.4, z: -168, duration: 5, ease: "power2.inOut" }, "+=0.5")
+      .to(lookTarget, { x: 30.6, y: 14.4, z: -198, duration: 5, ease: "power2.inOut", onUpdate: () => introCamera.lookAt(lookTarget) }, "-=5")
       .call(() => showText("ZUBENESCHAMALI (El alma de Libra)", "Y yo prometo ser siempre tu equilibrio. Tu pilar de paz, tu balanza y tu refugio infinito."))
-      .to(introBloom, { strength: 1.8, duration: 2, yoyo: true, repeat: 1 }, "+=0") // Pulse star
-      .call(hideText, null, "+=4.5"); // Wait 4.5s to read
+      .to(introBloom, { strength: 1.5, duration: 2, yoyo: true, repeat: 1 }, "+=0") 
+      .call(hideText, null, "+=5");
 
-    // WAYPOINT 3: THE HEART OF THE UNION (Center)
-    tl.to(introCamera.position, { x: 0, y: -20, z: -60, duration: 5, ease: "power3.inOut" }, "+=1")
-      .to(lookTarget, { x: 0, y: -5, z: -92.5, duration: 5, ease: "power3.inOut", onUpdate: () => introCamera.lookAt(lookTarget) }, "-=5")
-      .call(() => showText("NUESTRA UNIÓN (20 de Marzo)", "Dos destinos, dos estrellas, fundiéndose para crear el universo más hermoso de todos."))
+    // UNION STAR local = (0, 10, -90) -> Global = (0, 18, -162)
+    // WAYPOINT 3: THE HEART OF THE UNION -> Target: (0, 18, -162), Camera: (0, 18, -132)
+    tl.to(introCamera.position, { x: 0, y: 18, z: -132, duration: 5, ease: "power3.inOut" }, "+=0.5")
+      .to(lookTarget, { x: 0, y: 18, z: -162, duration: 5, ease: "power3.inOut", onUpdate: () => introCamera.lookAt(lookTarget) }, "-=5")
+      .call(() => showText("NUESTRA UNIÓN (20 de Marzo)", "Dos destinos, dos estrellas, fundiéndose para crear el universo más hermoso de todos."));
       
-    // FINAL WARP: Dive into the Union Star
-    tl.to(introBloom, { strength: 8, radius: 2.0, duration: 4, ease: "power2.in" }, "+=3")
-      .to(introCamera.position, { z: -85, duration: 4, ease: "power3.in" }, "-=4")
-      .call(hideText, null, "-=2");
+    // FINAL WARP: Hyperspace Travel Effect!
+    tl.to(introCamera, { fov: 140, duration: 3.5, ease: "power3.in", onUpdate: () => introCamera.updateProjectionMatrix() }, "+=4.5")
+      .to(introCamera.position, { z: -1200, duration: 3.5, ease: "power3.in" }, "-=3.5")
+      .to(introBloom, { strength: 6, radius: 2.5, duration: 3, ease: "power2.in" }, "-=3.5")
+      .call(hideText, null, "-=2.5")
+      .to("#intro-whiteout", { opacity: 1, duration: 1.5 }, "-=1.5");
 };
 
 function createPremiumSnow() {
