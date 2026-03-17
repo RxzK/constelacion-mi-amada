@@ -14,8 +14,8 @@ class ObjWriter {
         const hd = d / 2;
 
         const baseVerts = [
-            [-hw, -hd,  hh], [ hw, -hd,  hh], [ hw, -hd, -hh], [-hw, -hd, -hh], // Inner face
-            [-hw,  hd,  hh], [ hw,  hd,  hh], [ hw,  hd, -hh], [-hw,  hd, -hh], // Outer face
+            [-hw, -hd, hh], [hw, -hd, hh], [hw, -hd, -hh], [-hw, -hd, -hh], // Inner face
+            [-hw, hd, hh], [hw, hd, hh], [hw, hd, -hh], [-hw, hd, -hh], // Outer face
         ];
 
         const { x: rx, y: ry, z: rz } = rot;
@@ -46,20 +46,15 @@ class ObjWriter {
 
         transformedVerts.forEach(v => this.vertices.push(v));
         const vo = this.vertexOffset;
-        this.faces.push([vo, vo+1, vo+2, vo+3]); // Inner
-        this.faces.push([vo+4, vo+5, vo+1, vo]); // Front 
-        this.faces.push([vo+5, vo+6, vo+2, vo+1]); // Right
-        this.faces.push([vo+6, vo+7, vo+3, vo+2]); // Back
-        this.faces.push([vo+7, vo+4, vo, vo+3]); // Left
-        this.faces.push([vo+7, vo+6, vo+5, vo+4]); // Outer
+        this.faces.push([vo, vo + 1, vo + 2, vo + 3]); // Inner
+        this.faces.push([vo + 4, vo + 5, vo + 1, vo]); // Front 
+        this.faces.push([vo + 5, vo + 6, vo + 2, vo + 1]); // Right
+        this.faces.push([vo + 6, vo + 7, vo + 3, vo + 2]); // Back
+        this.faces.push([vo + 7, vo + 4, vo, vo + 3]); // Left
+        this.faces.push([vo + 7, vo + 6, vo + 5, vo + 4]); // Outer
         this.vertexOffset += 8;
-    }
 
-    // Helper for dome bricks
-    addDomeBlock(w, h, d, radius, phi, theta) {
-        const cp = Math.cos(phi), sp = Math.sin(phi);
-        const ct = Math.cos(theta), st = Math.sin(theta);
-        
+
         // Position on sphere
         const px = radius * ct * sp;
         const py = radius * st;
@@ -80,7 +75,7 @@ class ObjWriter {
 
 function buildDefinitiveIgloo() {
     const writer = new ObjWriter();
-    
+
     // 1. DOME
     const domeRadius = 3.6;
     const blockH = 0.55;
@@ -89,7 +84,7 @@ function buildDefinitiveIgloo() {
 
     for (let r = 0; r < rows; r++) {
         const theta = (r / rows) * (Math.PI / 2);
-        if (theta > (Math.PI/2) * 0.9) continue; // Leave hole for chimney
+        if (theta > (Math.PI / 2) * 0.9) continue; // Leave hole for chimney
 
         const radiusAtTheta = domeRadius * Math.cos(theta);
         const circ = 2 * Math.PI * radiusAtTheta;
@@ -99,10 +94,10 @@ function buildDefinitiveIgloo() {
 
         for (let i = 0; i < numBlocks; i++) {
             const phi = i * angleStep + stagger;
-            
+
             // Door cutout (front is roughly phi=0 or PI)
             // Let's use phi=0 as front
-            if (theta < 0.6 && (phi < 0.4 || phi > Math.PI*2 - 0.4)) continue;
+            if (theta < 0.6 && (phi < 0.4 || phi > Math.PI * 2 - 0.4)) continue;
 
             const bw = (circ / numBlocks) * 0.96;
             writer.addDomeBlock(bw, blockH * 0.96, blockD, domeRadius, phi, theta);
@@ -114,7 +109,7 @@ function buildDefinitiveIgloo() {
     const tHeight = 1.6;
     const tLength = 3.5;
     const tArches = 6;
-    
+
     for (let i = 0; i < tArches; i++) {
         const zDist = domeRadius - 0.5 + (i * 0.6);
         const numArchBlocks = 7;
@@ -122,13 +117,13 @@ function buildDefinitiveIgloo() {
             const archAngle = (j / (numArchBlocks - 1)) * Math.PI;
             const x = Math.cos(archAngle) * tWidth;
             const y = Math.sin(archAngle) * tHeight;
-            
+
             // Stagger tunnel arches
             const staggerY = (i % 2 === 0) ? 0 : 0.1;
 
-            writer.addBlock(1.0, 0.6, 0.5, 
-                { x: x, y: y + staggerY, z: zDist }, 
-                { x: 0, y: 0, z: archAngle - Math.PI/2 }
+            writer.addBlock(1.0, 0.6, 0.5,
+                { x: x, y: y + staggerY, z: zDist },
+                { x: 0, y: 0, z: archAngle - Math.PI / 2 }
             );
         }
     }
@@ -142,9 +137,9 @@ function buildDefinitiveIgloo() {
             const phi = (i / numCBlocks) * Math.PI * 2 + (r * 0.3);
             const cx = Math.cos(phi) * chimneyRadius;
             const cz = Math.sin(phi) * chimneyRadius;
-            writer.addBlock(0.8, 0.5, 0.4, 
-                { x: cx, y: cY, z: cz }, 
-                { x: 0, y: -phi + Math.PI/2, z: 0 }
+            writer.addBlock(0.8, 0.5, 0.4,
+                { x: cx, y: cY, z: cz },
+                { x: 0, y: -phi + Math.PI / 2, z: 0 }
             );
         }
     }

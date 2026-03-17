@@ -111,7 +111,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
     let renderer, scene, camera, animFrameId;
     let composer, bloomPass;
     let starMeshes = [];
-    let nebulaParts, bgStarfield; // Stardust removed for perf
+    let nebulaParts, bgStarfield, stardustRiver; 
+    let memoryEchoes = [];
     let mouseTrail = [];
     let particleTexture;
 
@@ -157,9 +158,16 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
         bgStarfield = createStarfield(2200);
         scene.add(bgStarfield);
 
+        /* ---- DYNAMIC STARDUST RIVER ---- */
+        stardustRiver = createStardustRiver(600);
+        scene.add(stardustRiver);
+
         /* ---- NEBULA PARTICLE CLOUDS ---- */
         nebulaParts = createNebula();
         scene.add(nebulaParts);
+
+        /* ---- MEMORY ECHOES (FLOATING WORDS) ---- */
+        createMemoryEchoes();
 
         /* ---- MEMORY STARS ---- */
         // Load custom user stars
@@ -249,7 +257,37 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
         geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
         geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
         const mat = new THREE.PointsMaterial({
-            size: 0.35, vertexColors: true, sizeAttenuation: true, transparent: true, opacity: 0.9, map: particleTexture, depthWrite: false, blending: THREE.AdditiveBlending
+            size: 0.35, vertexColors: true, sizeAttenuation: true, transparent: true, opacity: 0.8, map: particleTexture, depthWrite: false, blending: THREE.AdditiveBlending
+        });
+        return new THREE.Points(geo, mat);
+    }
+
+    /* ==== STARDUST RIVER (FLOWING PARTICLES) ==== */
+    function createStardustRiver(count) {
+        const geo = new THREE.BufferGeometry();
+        const pos = new Float32Array(count * 3);
+        const speeds = new Float32Array(count);
+        
+        for (let i = 0; i < count; i++) {
+            // Spread across a river-like band
+            pos[i * 3] = (Math.random() - 0.5) * 100; // X spread
+            pos[i * 3 + 1] = (Math.random() - 0.5) * 30 + Math.sin(pos[i * 3]*0.1) * 10; // Y with wave
+            pos[i * 3 + 2] = (Math.random() - 0.5) * 40 - 20; // Z depth
+            
+            speeds[i] = 0.02 + Math.random() * 0.03; // Flow speed
+        }
+        
+        geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+        geo.setAttribute("aSpeed", new THREE.BufferAttribute(speeds, 1));
+        
+        const mat = new THREE.PointsMaterial({
+            size: 0.25, 
+            color: 0xffd700, // Golden stardust
+            transparent: true, 
+            opacity: 0.4, 
+            map: particleTexture, 
+            depthWrite: false, 
+            blending: THREE.AdditiveBlending
         });
         return new THREE.Points(geo, mat);
     }
@@ -388,6 +426,58 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
         return new THREE.CanvasTexture(c);
     }
 
+    /* ==== MEMORY ECHOES (FLOATING WORDS) ==== */
+    function createMemoryEchoes() {
+        const words = [
+            "Amor", "20 de Marzo", "Sonrisa", "Lealtad", "Karla", 
+            "Equilibrio", "Luz", "Refugio", "Destino", "Nosotros"
+        ];
+        
+        words.forEach((word) => {
+            // Create text on canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 128;
+            const context = canvas.getContext('2d');
+            
+            context.font = "italic 40px 'Cormorant Garamond', serif";
+            context.fillStyle = "rgba(255, 230, 180, 0.8)"; // Soft golden tint
+            context.textAlign = "center";
+            context.textBaseline = "middle";
+            context.shadowColor = "rgba(255, 215, 0, 0.5)";
+            context.shadowBlur = 10;
+            context.fillText(word, canvas.width / 2, canvas.height / 2);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ 
+                map: texture, 
+                transparent: true, 
+                opacity: 0, // Starts hidden
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+            const sprite = new THREE.Sprite(material);
+            
+            // Background placement
+            sprite.position.x = (Math.random() - 0.5) * 80;
+            sprite.position.y = (Math.random() - 0.5) * 60;
+            sprite.position.z = -30 - Math.random() * 40; // Far behind
+            
+            // Proper aspect ratio scaling
+            sprite.scale.set(16, 4, 1);
+            
+            // Random oscillation metadata
+            sprite.userData = {
+                phase: Math.random() * Math.PI * 2,
+                speed: 0.2 + Math.random() * 0.3, // Very slow fade
+                baseY: sprite.position.y
+            };
+            
+            scene.add(sprite);
+            memoryEchoes.push(sprite);
+        });
+    }
+
     /* ==== CONSTELLATION LINES (ENERGY FLOW) ==== */
     // Keep reference to material for animation
     let globalLineMat;
@@ -475,6 +565,37 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
             bgStarfield.rotation.y = t * 0.002 + mouse3D.x * 0.04;
             bgStarfield.rotation.x = mouse3D.y * 0.04;
         }
+
+        // Animate Stardust River (flowing rightwards)
+        if (stardustRiver) {
+            const positions = stardustRiver.geometry.attributes.position;
+            const speeds = stardustRiver.geometry.attributes.aSpeed.array;
+            
+            for(let i=0; i<positions.count; i++) {
+                let x = positions.getX(i);
+                x += speeds[i];
+                // Wrap around logic
+                if (x > 50) x = -50;
+                positions.setX(i, x);
+                
+                // Gentle bobbing
+                positions.setY(i, positions.getY(i) + Math.sin(t*2 + i)*0.01);
+            }
+            positions.needsUpdate = true;
+        }
+
+        // Animate Memory Echoes (Breathing/Fading texts)
+        memoryEchoes.forEach(echo => {
+            const d = echo.userData;
+            // Float up slowly
+            echo.position.y = d.baseY + Math.sin(t * 0.5 + d.phase) * 2;
+            
+            // Fade in and out organically. (Math.sin goes -1 to 1). 
+            // We want it to be mostly invisible, only appearing occasionally.
+            const fade = Math.sin(t * d.speed + d.phase);
+            // Only show when fade is very high (peak of sine wave)
+            echo.material.opacity = fade > 0.7 ? (fade - 0.7) * 2 : 0; 
+        });
 
         // Mouse trail animation
         for (let i = mouseTrail.length - 1; i >= 0; i--) {
