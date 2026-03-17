@@ -111,7 +111,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
     let renderer, scene, camera, animFrameId;
     let composer, bloomPass;
     let starMeshes = [];
-    let nebulaParts, bgStarfield, stardustRiver; 
+    let nebulaParts, bgStarfield, stardustRiver, guardians; 
     let memoryEchoes = [];
     let mouseTrail = [];
     let particleTexture;
@@ -165,6 +165,10 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
         /* ---- NEBULA PARTICLE CLOUDS ---- */
         nebulaParts = createNebula();
         scene.add(nebulaParts);
+
+        /* ---- GUARDIAN CONSTELLATIONS (VIRGO & LIBRA) ---- */
+        guardians = createGuardianConstellations();
+        scene.add(guardians);
 
         /* ---- MEMORY ECHOES (FLOATING WORDS) ---- */
         createMemoryEchoes();
@@ -478,6 +482,83 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
         });
     }
 
+    /* ==== GUARDIAN CONSTELLATIONS (VIRGO & LIBRA BACKGROUND) ==== */
+    function createGuardianConstellations() {
+        const group = new THREE.Group();
+        // Positioned deep in the background
+        group.position.set(0, 0, -120);
+        
+        // --- VIRGO (Left Side) ---
+        // Simplified star coordinates for recognizable shape
+        const virgoPoints = [
+            [-30, 20, 0], [-20, 15, 0], [-15, 5, 0], [-25, -5, 0], 
+            [-10, 0, 0], [0, -10, 0], [5, -20, 0], [10, -5, 0], [-5, 10, 0] // Spica roughly at [0,-10,0]
+        ];
+        const virgoLines = [
+            0,1, 1,2, 2,3, 2,4, 4,5, 5,6, 5,7, 4,8, 8,1
+        ];
+
+        // --- LIBRA (Right Side) ---
+        const libraPoints = [
+            [20, 5, 0], [35, 15, 0], [30, -5, 0], [45, 0, 0] // Zubeneschamali roughly at [35,15,0]
+        ];
+        const libraLines = [
+            0,1, 0,2, 1,3, 2,3
+        ];
+        
+        function buildConstellation(points, indices, color) {
+            const geom = new THREE.BufferGeometry();
+            const posArray = new Float32Array(points.length * 3);
+            points.forEach((p, i) => {
+                posArray[i*3] = p[0] * 1.5; // Scale up massively
+                posArray[i*3+1] = p[1] * 1.5;
+                posArray[i*3+2] = p[2] * 1.5;
+            });
+            geom.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            geom.setIndex(indices);
+            
+            const mat = new THREE.LineBasicMaterial({
+                color: color, 
+                transparent: true, 
+                opacity: 0.15, // Very faint
+                blending: THREE.AdditiveBlending
+            });
+            
+            const lines = new THREE.LineSegments(geom, mat);
+            
+            // Add faint stars at vertices
+            const starGeo = new THREE.BufferGeometry();
+            starGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            const starMat = new THREE.PointsMaterial({
+                size: 2.0, 
+                color: color, 
+                transparent: true, 
+                opacity: 0.3,
+                map: particleTexture,
+                blending: THREE.AdditiveBlending
+            });
+            const stars = new THREE.Points(starGeo, starMat);
+            
+            const cGroup = new THREE.Group();
+            cGroup.add(lines); cGroup.add(stars);
+            return cGroup;
+        }
+
+        // Add them to the guardian group
+        // Virgo (Golden tint like Spica)
+        const virgoObj = buildConstellation(virgoPoints, virgoLines, 0xffd700);
+        virgoObj.position.x = -20; // Shift left
+        
+        // Libra (Emerald tint like Zubeneschamali)
+        const libraObj = buildConstellation(libraPoints, libraLines, 0x00ffcc);
+        libraObj.position.x = 20; // Shift right
+
+        group.add(virgoObj);
+        group.add(libraObj);
+        
+        return group;
+    }
+
     /* ==== CONSTELLATION LINES (ENERGY FLOW) ==== */
     // Keep reference to material for animation
     let globalLineMat;
@@ -564,6 +645,14 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
         if (bgStarfield) {
             bgStarfield.rotation.y = t * 0.002 + mouse3D.x * 0.04;
             bgStarfield.rotation.x = mouse3D.y * 0.04;
+        }
+
+        // Slowly rotate massive guardian constellations
+        if (guardians) {
+            guardians.rotation.z = Math.sin(t * 0.05) * 0.1; // Gentle sway
+            guardians.position.y = Math.sin(t * 0.1) * 2;
+            guardians.rotation.y = mouse3D.x * 0.02; // Slight parallax
+            guardians.rotation.x = mouse3D.y * 0.02;
         }
 
         // Animate Stardust River (flowing rightwards)
